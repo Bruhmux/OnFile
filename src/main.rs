@@ -24,6 +24,7 @@ async fn create_user(Json(payload): Json<CreateUser>) -> (StatusCode, Json<User>
     let user = User {
         id: 1111,
         username: payload.username,
+        friends: Vec::new(), // TODO: Fetch friends
     };
 
     (StatusCode::CREATED, Json(user))
@@ -38,4 +39,5 @@ struct CreateUser {
 struct User {
     id: u64,
     username: String,
+    friends: Vec<u64>,
 }
