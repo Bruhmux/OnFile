@@ -1,41 +1,29 @@
-use axum::{
-    Json, Router,
-    http::StatusCode,
-    routing::{get, post},
+use axum::{Router, routing::get};
+use std::net::SocketAddr;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::ServeDir,
 };
-use serde::{Deserialize, Serialize};
+
+mod routes;
+mod types;
 
 #[tokio::main]
 async fn main() {
+    let cors = CorsLayer::new().allow_origin(Any);
+
     let app = Router::new()
-        .route("/", get(root))
-        .route("/users", post(create_user));
+        .route("/", get(routes::root))
+        .route("/rooms", get(routes::get_rooms))
+        .nest_service("/", ServeDir::new("client/dist"))
+        .layer(cors);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
-}
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    println!("Listening on {addr}");
 
-async fn root() -> &'static str {
-    "Hello World!"
-}
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .expect("Failed to bind");
 
-async fn create_user(Json(payload): Json<CreateUser>) -> (StatusCode, Json<User>) {
-    //Creation logic here
-    let user = User {
-        id: 1111,
-        username: payload.username,
-    };
-
-    (StatusCode::CREATED, Json(user))
-}
-
-#[derive(Deserialize)]
-struct CreateUser {
-    username: String,
-}
-
-#[derive(Serialize)]
-struct User {
-    id: u64,
-    username: String,
+    axum::serve(listener, app).await.expect("Server Error");
 }
