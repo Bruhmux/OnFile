@@ -40,6 +40,8 @@ information based on the rules of the discovery they received.
 - When an `O` is placed, the player gets to choose *2* different files and any *2* pieces of information, including verdicts.
 
 > [!WARNING]
-> If a player does not have any information that is not publicly available,
-the next player may donate a piece of information that the receiving player
-must immediately reveal
+> If a player only has information that is publicly available (no information), then
+in turn order, a player may donate a piece of information to the receiving player.
+The receiving player must immediately reveal that information. If there are no
+willing donors, the player is given one random piece of information they do not
+already know and looses their turn.
