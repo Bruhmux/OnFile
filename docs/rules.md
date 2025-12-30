@@ -3,6 +3,7 @@
 ## Start of Game
 
 Players are organized into a random order.
+Files are randomized, each containing a uni
 First player is chosen to start. They choose 1 suspect file of their choice.
 From this file, the player chooses 2 of the following pieces of information.
 
@@ -26,10 +27,10 @@ and that **weapon** was with no other **suspect**
 
 |  | Suspect.1 | Suspect.2 | Suspect.3 | Suspect.4 |
 | --------------- | --------------- | --------------- | --------------- | --------------- |
-| Item.1 |  | X |  |  |
-| Item.1 |  | X |  |  |
-| Item.1 | X | O | X | X |
-| Item.1 |  | X |  |  |
+| Weapon.1 |  | X |  |  |
+| Weapon.2 |  | X |  |  |
+| Weapon.3 | X | O | X | X |
+| Weapon.4 |  | X |  |  |
 
 ## Main
 
