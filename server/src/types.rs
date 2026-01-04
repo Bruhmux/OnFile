@@ -69,16 +69,11 @@ struct File {
 }
 
 trait Evidence {
-    fn index(&self) -> u8;
+    fn index(&self) -> usize;
     fn category(&self) -> &'static str;
 }
 
-#[derive(PartialEq)]
-enum EvidenceType {
-    Suspect,
-    Weapon,
-    Location,
-}
+trait Coordinate {}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 enum Suspect {
@@ -126,13 +121,13 @@ impl Display for Suspect {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
             Suspect::TavernkeepGarrick => f.write_str("Tavernkeep Garrick"),
-            Suspect::KnightRowan => f.write_str("KnightRowan"),
-            Suspect::WizardBjorn => f.write_str("WizardBjorn"),
-            Suspect::ThiefJax => f.write_str("ThiefJax"),
-            Suspect::PriestThalos => f.write_str("PriestThalos"),
-            Suspect::AlchemistNox => f.write_str("AlchemistNox"),
-            Suspect::LibrarianMildra => f.write_str("LibrarianMildra"),
-            Suspect::MaidAnya => f.write_str("MaidAnya"),
+            Suspect::KnightRowan => f.write_str("Knight Rowan"),
+            Suspect::WizardBjorn => f.write_str("Wizard Bjorn"),
+            Suspect::ThiefJax => f.write_str("Thief Jax"),
+            Suspect::PriestThalos => f.write_str("Priest Thalos"),
+            Suspect::AlchemistNox => f.write_str("Alchemist Nox"),
+            Suspect::LibrarianMildra => f.write_str("Librarian Mildra"),
+            Suspect::MaidAnya => f.write_str("Maid Anya"),
         }
     }
 }
@@ -180,8 +175,8 @@ impl Evidence for Suspect {
     fn category(&self) -> &'static str {
         "Suspect"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -189,8 +184,8 @@ impl Evidence for Weapon {
     fn category(&self) -> &'static str {
         "Weapon"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -198,7 +193,7 @@ impl Evidence for Location {
     fn category(&self) -> &'static str {
         "Location"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
