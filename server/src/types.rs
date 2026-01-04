@@ -18,8 +18,10 @@ pub struct Room {
     id: [u8; 5],
     players: Vec<User>,
     files: Vec<File>,
+    grid: LogicGrid,
 }
 
+#[derive(Serialize)]
 struct LogicGrid {
     suspect_weapon: [[Option<bool>; 8]; 8],
     suspect_location: [[Option<bool>; 8]; 8],
@@ -27,7 +29,35 @@ struct LogicGrid {
 }
 
 impl LogicGrid {
-    pub fn update_grid<T, U>(&mut self, item1: T, item2: U) {}
+    pub fn new() -> Self {
+        Self {
+            suspect_weapon: [[None; 8]; 8],
+            suspect_location: [[None; 8]; 8],
+            weapon_location: [[None; 8]; 8],
+        }
+    }
+
+    pub fn add_evidence<T, U>(&mut self, item1: T, item2: U, is_valid: bool)
+    where
+        T: Evidence,
+        U: Evidence,
+    {
+        let i = item1.index();
+        let j = item2.index();
+
+        match (item1.category(), item2.category()) {
+            ("Suspect", "Weapon") => self.suspect_weapon[i][j] = Some(is_valid),
+            ("Weapon", "Suspect") => self.suspect_weapon[j][i] = Some(is_valid),
+
+            ("Suspect", "Location") => self.suspect_location[i][j] = Some(is_valid),
+            ("Location", "Suspect") => self.suspect_location[j][i] = Some(is_valid),
+
+            ("Weapon", "Location") => self.weapon_location[i][j] = Some(is_valid),
+            ("Location", "Weapon") => self.weapon_location[j][i] = Some(is_valid),
+
+            _ => println!("Warning: Attempted to compare the same category or unsupported types."),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -39,16 +69,11 @@ struct File {
 }
 
 trait Evidence {
-    fn index(&self) -> u8;
+    fn index(&self) -> usize;
     fn category(&self) -> &'static str;
 }
 
-#[derive(PartialEq)]
-enum EvidenceType {
-    Suspect,
-    Weapon,
-    Location,
-}
+trait Coordinate {}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 enum Suspect {
@@ -96,13 +121,13 @@ impl Display for Suspect {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
             Suspect::TavernkeepGarrick => f.write_str("Tavernkeep Garrick"),
-            Suspect::KnightRowan => f.write_str("KnightRowan"),
-            Suspect::WizardBjorn => f.write_str("WizardBjorn"),
-            Suspect::ThiefJax => f.write_str("ThiefJax"),
-            Suspect::PriestThalos => f.write_str("PriestThalos"),
-            Suspect::AlchemistNox => f.write_str("AlchemistNox"),
-            Suspect::LibrarianMildra => f.write_str("LibrarianMildra"),
-            Suspect::MaidAnya => f.write_str("MaidAnya"),
+            Suspect::KnightRowan => f.write_str("Knight Rowan"),
+            Suspect::WizardBjorn => f.write_str("Wizard Bjorn"),
+            Suspect::ThiefJax => f.write_str("Thief Jax"),
+            Suspect::PriestThalos => f.write_str("Priest Thalos"),
+            Suspect::AlchemistNox => f.write_str("Alchemist Nox"),
+            Suspect::LibrarianMildra => f.write_str("Librarian Mildra"),
+            Suspect::MaidAnya => f.write_str("Maid Anya"),
         }
     }
 }
@@ -150,8 +175,8 @@ impl Evidence for Suspect {
     fn category(&self) -> &'static str {
         "Suspect"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -159,8 +184,8 @@ impl Evidence for Weapon {
     fn category(&self) -> &'static str {
         "Weapon"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
 
@@ -168,7 +193,7 @@ impl Evidence for Location {
     fn category(&self) -> &'static str {
         "Location"
     }
-    fn index(&self) -> u8 {
-        *self as u8
+    fn index(&self) -> usize {
+        *self as usize
     }
 }
