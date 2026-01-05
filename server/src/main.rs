@@ -1,4 +1,7 @@
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use std::net::SocketAddr;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -7,6 +10,7 @@ use tower_http::{
 
 mod routes;
 mod types;
+mod user;
 
 #[tokio::main]
 async fn main() {
