@@ -1,4 +1,7 @@
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use std::net::SocketAddr;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -7,6 +10,7 @@ use tower_http::{
 
 mod routes;
 mod types;
+mod user;
 
 #[tokio::main]
 async fn main() {
@@ -17,6 +21,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(routes::root))
         .route("/rooms", get(routes::get_rooms))
+        .route("/create/account", post(user::set_username))
         // Serve bun built static files
         .nest_service("/", ServeDir::new(client_static_path))
         .layer(cors);
