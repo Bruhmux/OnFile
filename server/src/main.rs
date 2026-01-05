@@ -18,12 +18,14 @@ async fn main() {
     let client_static_path = "client/dist";
 
     // NOTE: Add api routes here
-    let app = Router::new()
-        .route("/", get(routes::root))
+    let api_routes = Router::new()
         .route("/rooms", get(routes::get_rooms))
-        .route("/create/account", post(user::set_username))
+        .route("/hello", get(routes::root));
+
+    let app = Router::new()
+        .nest("/api", api_routes)
         // Serve bun built static files
-        .nest_service("/", ServeDir::new(client_static_path))
+        .fallback_service(ServeDir::new(client_static_path))
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
