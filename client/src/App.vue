@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import ThemeToggle from "@/components/ThemeToggle.vue";
 </script>
 
 <template>
+  <header class="flex justify-end m-4 gap-2">
+    <ThemeToggle />
+  </header>
   <main>
     <router-view />
   </main>
