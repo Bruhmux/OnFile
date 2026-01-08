@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import {Button} from "@/components/ui/button";
 import {onMounted, ref} from "vue";
+import {useSocket} from "@/composables/useSocket.ts";
 
 type TerminalState = 'MENU' | 'JOINING' | 'CREATING' | 'LOBBY_CREATED'
 
 const inputValue = ref('')
 const currentState = ref<TerminalState>('MENU')
-const logs = ref<string[]>([])
 const isLoading = ref(false)
 
+const { logs, messages, init, sendPing } = useSocket();
+
 onMounted(() => {
-  logs.value.push('> Initialize connection sequence...')
+  init()
 })
 
 const selectOption = (option: 'create' | 'join') => {
@@ -58,6 +60,11 @@ const submitJoinCode = () => {
 
 <template>
   <div class="h-screen flex flex-col items-center justify-center space-y-8 w-full">
+     <Button @click="sendPing">Send Ping</Button>
+    <ul class="text-primary font-mono text-sm">
+      <li v-for="(msg, i) in messages" :key="i">{{ msg }}</li>
+    </ul>
+
     <div class="w-full px-4 py-2 border-b border-primary/10 select-none max-w-2xl text-primary font-mono overflow-hidden">
       <span class="text-xs tracking-widest opacity-50">OS // CASTER</span>
     </div>
