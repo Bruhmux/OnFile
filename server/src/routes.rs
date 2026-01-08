@@ -1,5 +1,7 @@
 use axum::response::IntoResponse;
 
+pub(crate) mod socket;
+
 pub async fn root() -> &'static str {
     "API Running..."
 }
