@@ -1,19 +1,22 @@
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use axum::{Router, routing::get};
 use std::net::SocketAddr;
 use tower_http::{
     cors::{Any, CorsLayer},
     services::ServeDir,
 };
 
+use crate::db::init_connection;
+
+mod db;
 mod routes;
 mod types;
 mod user;
 
 #[tokio::main]
 async fn main() {
+    let db = init_connection(db::Branch::Test).await;
+    //  TODO: utilize db to create rooms and connecto users
+
     let cors = CorsLayer::new().allow_origin(Any);
     let client_static_path = "client/dist";
 

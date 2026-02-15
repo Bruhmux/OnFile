@@ -148,7 +148,7 @@ impl Display for Weapon {
 }
 
 impl Display for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Location::GuildHall => f.write_str("Guild Hall"),
             Location::AlchemyLab => f.write_str("Alchemy Lab"),
