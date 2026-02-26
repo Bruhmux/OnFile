@@ -1,11 +1,8 @@
-use axum::{Router, routing::get};
-use std::net::SocketAddr;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    services::ServeDir,
-};
+use axum::{Router, http::HeaderValue, routing::get};
+use std::{net::SocketAddr, sync::Arc};
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
-use crate::db::init_connection;
+use crate::{db::init_connection, types::AppState};
 
 mod db;
 mod routes;
@@ -14,13 +11,13 @@ mod user;
 
 #[tokio::main]
 async fn main() {
-    let db = init_connection(db::Branch::Test).await;
-    //  TODO: utilize db to create rooms and connecto users
+    let db = init_connection().await.unwrap();
+    let state = Arc::new(AppState { db });
 
-    let cors = CorsLayer::new().allow_origin(Any);
+    let cors =
+        CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
     let client_static_path = "client/dist";
 
-    // NOTE: Add api routes here
     let api_routes = Router::new()
         .route("/rooms", get(routes::get_rooms))
         .route("/hello", get(routes::root));
