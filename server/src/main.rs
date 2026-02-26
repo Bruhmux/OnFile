@@ -1,11 +1,11 @@
-use axum::{Router, http::HeaderValue, routing::get};
+use axum::{Router, http::HeaderValue};
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{db::init_connection, types::AppState};
 
+mod api_dto;
 mod db;
-mod routes;
 mod types;
 mod user;
 
@@ -18,12 +18,7 @@ async fn main() {
         CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
     let client_static_path = "client/dist";
 
-    let api_routes = Router::new()
-        .route("/rooms", get(routes::get_rooms))
-        .route("/hello", get(routes::root));
-
     let app = Router::new()
-        .nest("/api", api_routes)
         // Serve bun built static files
         .fallback_service(ServeDir::new(client_static_path))
         .layer(cors);
