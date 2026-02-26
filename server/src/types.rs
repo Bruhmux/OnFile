@@ -1,5 +1,13 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, prelude::FromRow};
 use std::fmt::Display;
+use uuid::Uuid;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+}
 
 #[derive(Deserialize)]
 pub struct CreateUser {
