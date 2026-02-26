@@ -1,44 +1,39 @@
-use std::{
-    env::{self, var},
-    fmt::Display,
-};
+use chrono::{DateTime, Utc};
+use sqlx::FromRow;
+use std::env;
+use uuid::Uuid;
 
 use dotenv::dotenv;
-use sqlx::{Pool, Postgres, Result, postgres::PgPoolOptions};
+use serde::{Deserialize, Serialize};
+use sqlx::{Result, postgres::PgPoolOptions};
 
-pub async fn init_connection(db_branch: Branch) -> Result<Pool<Postgres>, sqlx::Error> {
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(get_db_url(db_branch).as_str())
-        .await?;
-
-    Ok(pool)
+#[derive(Deserialize)]
+pub struct CreateUserRequest {
+    pub display_name: String,
 }
 
-fn get_db_url(db_branch: Branch) -> String {
+#[derive(Serialize)]
+pub struct CreateUserResponse {
+    pub user_id: Uuid,
+    pub connection_token: Uuid,
+}
+
+pub async fn init_connection() -> Result<sqlx::PgPool, sqlx::Error> {
     dotenv().ok();
 
-    for (key, value) in env::vars() {
-        println!("{}: {}", key, value);
-    }
-    let general_url = var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let db_url = format!("{general_url}{db_branch}");
-    db_url
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    PgPoolOptions::new()
+        .max_connections(15)
+        .connect(&db_url)
+        .await
 }
 
-#[derive(Debug)]
-pub enum Branch {
-    Test,
-    Staging,
-    Production,
-}
-
-impl Display for Branch {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Test => f.write_str("test"),
-            Self::Staging => f.write_str("staging"),
-            Self::Production => f.write_str("prod"),
-        }
-    }
+#[derive(FromRow)]
+pub struct DbUser {
+    pub id: Uuid,
+    pub display_name: String,
+    pub connection_token: Uuid,
+    pub connected_at: DateTime<Utc>,
+    pub last_heartbeat: DateTime<Utc>,
 }
