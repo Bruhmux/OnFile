@@ -11,3 +11,7 @@ pub struct CreateUserResponse {
     pub user_id: Uuid,
     pub connection_token: Uuid,
 }
+
+pub fn checkhealth() -> String {
+    "App is running".to_string()
+}
