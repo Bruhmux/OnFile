@@ -1,6 +1,5 @@
 use axum::{
     Router,
-    extract::State,
     http::HeaderValue,
     routing::{get, post},
 };
@@ -25,17 +24,16 @@ pub struct AppState {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let pool = init_connection()
+    let pool: PgPool = init_connection()
         .await
         .expect("Failed to connect to database");
 
-    let app_state = Arc::new(AppState { db: pool });
+    let app_state: Arc<AppState> = Arc::new(AppState { db: pool });
 
-    let cors =
+    let cors: CorsLayer =
         CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
 
-    let app = Router::new()
-        // Serve bun built static files
+    let app: Router = Router::new()
         .fallback_service(ServeDir::new("client/dist")) // bun static file directory
         .layer(cors)
         .route("/", get(checkhealth))
