@@ -1,5 +1,13 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, prelude::FromRow};
 use std::fmt::Display;
+use uuid::Uuid;
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+}
 
 #[derive(Deserialize)]
 pub struct CreateUser {
@@ -148,7 +156,7 @@ impl Display for Weapon {
 }
 
 impl Display for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Location::GuildHall => f.write_str("Guild Hall"),
             Location::AlchemyLab => f.write_str("Alchemy Lab"),
