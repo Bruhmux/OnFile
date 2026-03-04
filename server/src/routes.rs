@@ -1,0 +1,5 @@
+use rand::{RngExt, distr::Alphabetic};
+
+pub async fn checkhealth() -> &'static str {
+    "App is running"
+}
