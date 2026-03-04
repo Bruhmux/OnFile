@@ -1,18 +1,24 @@
 use axum::{Router, http::HeaderValue};
-use std::{net::SocketAddr, sync::Arc};
+use sqlx::PgPool;
+use std::net::SocketAddr;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-use crate::{db::init_connection, types::AppState};
+use crate::db::init_connection;
 
 mod api_dto;
 mod db;
 mod types;
 mod user;
 
+struct AppState {
+    pool: PgPool,
+}
+
 #[tokio::main]
 async fn main() {
-    let db = init_connection().await.unwrap();
-    let state = Arc::new(AppState { db });
+    tracing_subscriber::fmt::init();
+
+    let pool = init_connection().await.unwrap();
 
     let cors =
         CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
