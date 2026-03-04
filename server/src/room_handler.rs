@@ -52,5 +52,5 @@ pub async fn create_room(
             Err(_) => return Err(http::StatusCode::INTERNAL_SERVER_ERROR),
         }
     }
-    Err(http::StatusCode::CONFLICT)
+    Err(http::StatusCode::CONFLICT) // impressive if you made it this, go buy a lottery ticket
 }
