@@ -7,11 +7,11 @@ use sqlx::PgPool;
 use std::{net::SocketAddr, sync::Arc};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-use crate::{db::init_connection, room_handler::create_room, routes::checkhealth};
+use crate::{db::init_connection, handlers::room::create_room, routes::checkhealth};
 
 mod db;
 mod dto;
-mod room_handler;
+mod handlers;
 mod routes;
 mod types;
 mod user;

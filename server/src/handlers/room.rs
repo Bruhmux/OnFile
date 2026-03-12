@@ -1,12 +1,21 @@
-use std::sync::Arc;
-
 use axum::{Json, extract::State, http};
 use rand::{RngExt, distr::Alphabetic};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use uuid::Uuid;
 
-use crate::{
-    AppState,
-    dto::{CreateRoomRequest, CreateRoomResponse},
-};
+use crate::AppState;
+
+#[derive(Deserialize)]
+pub struct CreateRoomRequest {
+    pub display_name: String,
+}
+
+#[derive(Serialize)]
+pub struct CreateRoomResponse {
+    pub room_id: Uuid,
+    pub room_code: String,
+}
 
 fn generate_room_code() -> String {
     rand::rng()
