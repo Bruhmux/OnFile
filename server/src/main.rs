@@ -10,11 +10,9 @@ use tower_http::{cors::CorsLayer, services::ServeDir};
 use crate::{db::init_connection, handlers::room::create_room, routes::checkhealth};
 
 mod db;
-mod dto;
 mod handlers;
 mod routes;
 mod types;
-mod user;
 
 pub struct AppState {
     pub db: PgPool,
