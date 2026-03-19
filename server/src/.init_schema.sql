@@ -1,19 +1,18 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 
 CREATE TABLE rooms (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    room_code CHAR(5) NOT NULL UNIQUE,
+    room_code VARCHAR(5) NOT NULL UNIQUE CHECK (char_length(room_code) = 5),
     display_name TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
-CREATE INDEX idx_rooms_room_code ON rooms(room_code);
 
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    display_name TEXT NOT NULL,
+    display_name TEXT NOT NULL CHECK (char_length(display_name) <= 32),
     connection_token UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_heartbeat TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -40,11 +39,14 @@ CREATE TYPE game_status AS ENUM (
 CREATE TABLE game_states (
     room_id UUID PRIMARY KEY REFERENCES rooms(id) ON DELETE CASCADE,
     status game_status NOT NULL DEFAULT 'waiting',
-    current_turn_user UUID REFERENCES users(id),
+    current_turn_user UUID,
     started_at TIMESTAMPTZ,
     ended_at TIMESTAMPTZ,
     solution_data JSONB NOT NULL,
-    version INT NOT NULL DEFAULT 0
+    version INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (room_id, current_turn_user)
+        REFERENCES room_participants(room_id, user_id)
+        ON DELETE SET NULL
 );
 CREATE INDEX idx_game_states_current_turn ON game_states(current_turn_user);
 
@@ -52,7 +54,7 @@ CREATE INDEX idx_game_states_current_turn ON game_states(current_turn_user);
 CREATE TABLE clues (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
-    clue_order INT NOT NULL,
+    clue_order INT NOT NULL CHECK (clue_order >= 0),
     clue_text TEXT NOT NULL,
     clue_type TEXT,
     UNIQUE (room_id, clue_order)

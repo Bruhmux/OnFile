@@ -1,39 +1,16 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, prelude::FromRow};
 use std::fmt::Display;
-use uuid::Uuid;
-
-#[derive(Clone)]
-pub struct AppState {
-    pub db: PgPool,
-}
-
-#[derive(Deserialize)]
-pub struct CreateUser {
-    username: String,
-}
 
 #[derive(Serialize)]
-pub struct User {
-    id: u64,
-    username: String,
-    friends: Vec<u64>,
-}
-
-#[derive(Serialize)]
-pub struct Room {
-    id: [u8; 5],
-    players: Vec<User>,
-    files: Vec<File>,
-    grid: LogicGrid,
-}
-
-#[derive(Serialize)]
-struct LogicGrid {
+pub struct LogicGrid {
     suspect_weapon: [[Option<bool>; 8]; 8],
     suspect_location: [[Option<bool>; 8]; 8],
     weapon_location: [[Option<bool>; 8]; 8],
+}
+
+enum EvidenceError {
+    SameType,
+    Invalid,
 }
 
 impl LogicGrid {
@@ -45,7 +22,12 @@ impl LogicGrid {
         }
     }
 
-    pub fn add_evidence<T, U>(&mut self, item1: T, item2: U, is_valid: bool)
+    pub fn add_evidence<T, U>(
+        &mut self,
+        item1: T,
+        item2: U,
+        is_verified: bool,
+    ) -> Result<(), EvidenceError>
     where
         T: Evidence,
         U: Evidence,
@@ -53,18 +35,22 @@ impl LogicGrid {
         let i = item1.index();
         let j = item2.index();
 
-        match (item1.category(), item2.category()) {
-            ("Suspect", "Weapon") => self.suspect_weapon[i][j] = Some(is_valid),
-            ("Weapon", "Suspect") => self.suspect_weapon[j][i] = Some(is_valid),
-
-            ("Suspect", "Location") => self.suspect_location[i][j] = Some(is_valid),
-            ("Location", "Suspect") => self.suspect_location[j][i] = Some(is_valid),
-
-            ("Weapon", "Location") => self.weapon_location[i][j] = Some(is_valid),
-            ("Location", "Weapon") => self.weapon_location[j][i] = Some(is_valid),
-
-            _ => println!("Warning: Attempted to compare the same category or unsupported types."),
+        if item1.category() == item2.category() {
+            return Err(EvidenceError::SameType);
         }
+        match (item1.category(), item2.category()) {
+            ("Suspect", "Weapon") => self.suspect_weapon[i][j] = Some(is_verified),
+            ("Weapon", "Suspect") => self.suspect_weapon[j][i] = Some(is_verified),
+
+            ("Suspect", "Location") => self.suspect_location[i][j] = Some(is_verified),
+            ("Location", "Suspect") => self.suspect_location[j][i] = Some(is_verified),
+
+            ("Weapon", "Location") => self.weapon_location[i][j] = Some(is_verified),
+            ("Location", "Weapon") => self.weapon_location[j][i] = Some(is_verified),
+
+            _ => return Err(EvidenceError::Invalid),
+        }
+        Ok(())
     }
 }
 
