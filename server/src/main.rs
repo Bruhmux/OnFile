@@ -1,18 +1,20 @@
-use axum::{Router, http::HeaderValue, routing::get};
+use crate::{
+    db::{AppState, init_connection},
+    tasks::cli::cli_loop,
+    tasks::server::serve_app,
+};
+use axum::extract::State;
 use sqlx::PgPool;
-use std::net::SocketAddr;
-use tower_http::{cors::CorsLayer, services::ServeDir};
-
-use crate::{api_dto::checkhealth, db::init_connection};
+use std::sync::Arc;
+use tokio::{join, sync::broadcast};
 
 mod api_dto;
 mod db;
+mod handlers;
+mod routes;
+mod tasks;
 mod types;
 mod user;
-
-struct AppState {
-    pool: PgPool,
-}
 
 #[tokio::main]
 async fn main() {
