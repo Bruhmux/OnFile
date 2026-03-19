@@ -8,13 +8,11 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::{join, sync::broadcast};
 
-mod api_dto;
 mod db;
 mod handlers;
 mod routes;
 mod tasks;
 mod types;
-mod user;
 
 #[tokio::main]
 async fn main() {
