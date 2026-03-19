@@ -1,3 +1,12 @@
+use crate::{
+    db::{AppState, init_connection},
+    tasks::cli::cli_loop,
+    tasks::server::serve_app,
+};
+use axum::extract::State;
+use sqlx::PgPool;
+use std::sync::Arc;
+use tokio::{join, sync::broadcast};
 use axum::{
     Router,
     http::HeaderValue,
@@ -12,37 +21,24 @@ use crate::{db::init_connection, handlers::room::create_room, routes::checkhealt
 mod db;
 mod handlers;
 mod routes;
+mod tasks;
 mod types;
-
-pub struct AppState {
-    pub db: PgPool,
-}
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    let (shutdown, _) = broadcast::channel::<String>(16);
+    let shutdown_cl = shutdown.clone();
+
     let pool: PgPool = init_connection()
         .await
         .expect("Failed to connect to database");
+    let app_state = Arc::new(AppState { db: pool });
 
-    let app_state: Arc<AppState> = Arc::new(AppState { db: pool });
+    //     Server Start
+    let server_task = serve_app(app_state.clone());
+    let cli_task = cli_loop(State(app_state.clone()));
 
-    let cors: CorsLayer =
-        CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
-
-    let app: Router = Router::new()
-        .fallback_service(ServeDir::new("client/dist")) // bun static file directory
-        .layer(cors)
-        .route("/", get(checkhealth))
-        .route("/room/create", post(create_room))
-        .with_state(app_state);
-
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("Listening on {addr}");
-    let listener = tokio::net::TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 3000)))
-        .await
-        .expect("Failed to bind socket");
-
-    axum::serve(listener, app).await.expect("Server Error");
+    join!(server_task, cli_task);
 }

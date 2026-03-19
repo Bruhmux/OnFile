@@ -113,7 +113,7 @@ enum Verdict {
 
 impl Display for Suspect {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
+        match self {
             Suspect::TavernkeepGarrick => f.write_str("Tavernkeep Garrick"),
             Suspect::KnightRowan => f.write_str("Knight Rowan"),
             Suspect::WizardBjorn => f.write_str("Wizard Bjorn"),

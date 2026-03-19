@@ -6,12 +6,12 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateRoomRequest {
     pub display_name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct CreateRoomResponse {
     pub room_id: Uuid,
     pub room_code: String,
