@@ -7,14 +7,22 @@ use axum::extract::State;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::{join, sync::broadcast};
+use axum::{
+    Router,
+    http::HeaderValue,
+    routing::{get, post},
+};
+use sqlx::PgPool;
+use std::{net::SocketAddr, sync::Arc};
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
-mod api_dto;
+use crate::{db::init_connection, handlers::room::create_room, routes::checkhealth};
+
 mod db;
 mod handlers;
 mod routes;
 mod tasks;
 mod types;
-mod user;
 
 #[tokio::main]
 async fn main() {
