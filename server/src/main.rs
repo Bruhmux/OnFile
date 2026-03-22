@@ -1,7 +1,7 @@
+#![allow(dead_code, unused)]
 use crate::{
-    db::{AppState, init_connection},
-    tasks::cli::cli_loop,
-    tasks::server::serve_app,
+    db::{init_connection, types::AppState},
+    tasks::{cli::cli_loop, server::serve_app},
 };
 use axum::extract::State;
 use sqlx::PgPool;

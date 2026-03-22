@@ -1,4 +1,4 @@
-use crate::{AppState, handlers::room::create_room, routes::checkhealth};
+use crate::{db::types::AppState, handlers::room::create_room, routes::checkhealth};
 use axum::{
     Router,
     http::HeaderValue,
