@@ -19,7 +19,6 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let (shutdown, _) = broadcast::channel::<String>(16);
-    let shutdown_cl = shutdown.clone();
 
     let pool: PgPool = init_connection()
         .await

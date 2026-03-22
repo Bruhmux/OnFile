@@ -1,3 +1,4 @@
+use crate::{AppState, handlers::room::create_room, routes::checkhealth};
 use axum::{
     Router,
     http::HeaderValue,
@@ -6,10 +7,6 @@ use axum::{
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{spawn, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
-
-use crate::{handlers::room::create_room, routes::checkhealth};
-
-use crate::AppState;
 
 pub async fn serve_app(state: Arc<AppState>) -> JoinHandle<()> {
     spawn(async move {
