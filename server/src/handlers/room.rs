@@ -1,4 +1,4 @@
-use crate::db::AppState;
+use crate::db::types::AppState;
 use axum::{Json, extract::State, http};
 use rand::{RngExt, distr::Alphabetic};
 use serde::{Deserialize, Serialize};

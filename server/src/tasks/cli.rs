@@ -1,5 +1,5 @@
 use crate::{
-    db::AppState,
+    db::types::AppState,
     handlers::room::{CreateRoomRequest, create_room},
 };
 use axum::extract::State;
@@ -14,6 +14,7 @@ pub async fn cli_loop(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
         let stdin = tokio::io::stdin();
         let mut reader: BufReader<Stdin> = io::BufReader::new(stdin);
         let mut line_buf = String::new();
+
         println!("Commands: status | quit");
 
         loop {

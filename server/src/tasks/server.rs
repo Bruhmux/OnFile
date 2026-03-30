@@ -1,3 +1,4 @@
+use crate::{db::types::AppState, handlers::room::create_room, routes::checkhealth};
 use axum::{
     Router,
     http::HeaderValue,
@@ -7,11 +8,7 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::{spawn, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-use crate::{handlers::room::create_room, routes::checkhealth};
-
-use crate::AppState;
-
-pub async fn serve_app(state: Arc<AppState>) -> JoinHandle<()> {
+pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
     spawn(async move {
         let cors =
             CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
@@ -32,4 +29,11 @@ pub async fn serve_app(state: Arc<AppState>) -> JoinHandle<()> {
 
         axum::serve(listener, app).await.expect("Server Error");
     })
+}
+
+pub async fn init_db(state: Arc<AppState>) {
+    sqlx::migrate!("./migrations")
+        .run(&state.db)
+        .await
+        .expect("failed to run db migration");
 }
