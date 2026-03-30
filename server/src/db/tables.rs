@@ -29,4 +29,18 @@ struct Participants {
 }
 
 #[derive(sqlx::FromRow)]
-pub struct game_state {}
+pub struct game_state {
+    room_id: Uuid,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct clues {}
+
+#[derive(sqlx::FromRow)]
+pub struct logic_grid {}
+
+#[derive(sqlx::FromRow)]
+pub struct grid_cell {}
+
+#[derive(sqlx::FromRow)]
+pub struct actions {}

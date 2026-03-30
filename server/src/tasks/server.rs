@@ -8,7 +8,7 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio::{spawn, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-pub async fn serve_app(state: Arc<AppState>) -> JoinHandle<()> {
+pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
     spawn(async move {
         let cors =
             CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
@@ -29,4 +29,11 @@ pub async fn serve_app(state: Arc<AppState>) -> JoinHandle<()> {
 
         axum::serve(listener, app).await.expect("Server Error");
     })
+}
+
+pub async fn init_db(state: Arc<AppState>) {
+    sqlx::migrate!("./migrations")
+        .run(&state.db)
+        .await
+        .expect("failed to run db migration");
 }

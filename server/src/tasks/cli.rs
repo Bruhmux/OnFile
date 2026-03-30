@@ -1,5 +1,5 @@
 use crate::{
-    db::AppState,
+    db::types::AppState,
     handlers::room::{CreateRoomRequest, create_room},
 };
 use axum::extract::State;
