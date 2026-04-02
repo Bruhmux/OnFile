@@ -31,7 +31,7 @@ async fn main() {
     init_db(app_state.clone());
     //     Server Start
     let app_server = create_app(app_state.clone());
-    let cli_task = cli_loop(State(app_state.clone()));
+    let cli_task = cli_loop(State(app_state).clone());
 
     join!(app_server, cli_task);
 }
