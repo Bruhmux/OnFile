@@ -18,7 +18,7 @@ pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
             .layer(cors)
             .route("/", get(checkhealth))
             .route("/room/create", post(create_room))
-            .with_state(state.clone());
+            .with_state(state);
 
         let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
         println!("Listening on {addr}");
