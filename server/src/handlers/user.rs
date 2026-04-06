@@ -1,4 +1,4 @@
-use crate::{AppState, db::User};
+use crate::{AppState, db::tables::User};
 use axum::{Json, extract::State, http};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -6,13 +6,13 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
-struct CreateUserRequest {
+pub struct CreateUserRequest {
     display_name: String,
     room_id: Uuid,
 }
 
 #[derive(Serialize)]
-struct CreateUserResponse {
+pub struct CreateUserResponse {
     connection_token: Uuid,
 }
 

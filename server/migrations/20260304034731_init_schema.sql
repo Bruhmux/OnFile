@@ -1,4 +1,3 @@
--- Add migration script here
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 
@@ -31,7 +30,7 @@ CREATE TABLE room_participants (
 
 
 CREATE TYPE game_status AS ENUM (
-    'waiting',
+    'open',
     'in_progress',
     'finished'
 );
@@ -39,7 +38,7 @@ CREATE TYPE game_status AS ENUM (
 
 CREATE TABLE game_states (
     room_id UUID PRIMARY KEY REFERENCES rooms(id) ON DELETE CASCADE,
-    status game_status NOT NULL DEFAULT 'waiting',
+    status game_status NOT NULL DEFAULT 'open',
     current_turn_user UUID,
     started_at TIMESTAMPTZ,
     ended_at TIMESTAMPTZ,
