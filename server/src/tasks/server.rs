@@ -1,15 +1,19 @@
-use crate::{db::types::AppState, handlers::room::create_room, routes::checkhealth};
+use crate::{
+    cli::options::Opt, db::types::AppState, handlers::room::create_room, routes::checkhealth,
+};
 use axum::{
     Router,
     http::HeaderValue,
     routing::{get, post},
 };
-use std::{net::SocketAddr, sync::Arc};
+use core::fmt;
+use std::{fmt::format, net::SocketAddr, sync::Arc};
 use tokio::{spawn, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
+pub async fn create_app(state: Arc<AppState>, launch_opts: Opt) -> JoinHandle<()> {
     spawn(async move {
+        let origin = format!("http://{}:{}", launch_opts.addr, launch_opts.port);
         let cors =
             CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
 
