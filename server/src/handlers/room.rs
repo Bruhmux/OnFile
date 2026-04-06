@@ -42,7 +42,7 @@ pub async fn create_room(
             room_code,
             payload.display_name
         )
-        .fetch_one(state.clone().db)
+        .fetch_one(&state.db)
         .await;
 
         match insert_result {
