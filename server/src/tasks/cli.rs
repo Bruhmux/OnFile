@@ -3,6 +3,7 @@ use crate::{
     handlers::room::{CreateRoomRequest, create_room},
 };
 use axum::extract::State;
+use rustyline::{DefaultEditor, error::ReadlineError};
 use std::sync::Arc;
 use tokio::{
     io::{self, AsyncBufReadExt, BufReader, Stdin},
@@ -11,16 +12,11 @@ use tokio::{
 
 pub async fn cli_loop(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
     tokio::task::spawn(async move {
-        let stdin = tokio::io::stdin();
-        let mut reader: BufReader<Stdin> = io::BufReader::new(stdin);
-        let mut line_buf = String::new();
-        println!("Commands: status | quit");
-
+        let mut repl = DefaultEditor::new().expect("Unable to initiate REPL");
         loop {
-            line_buf.clear();
-            match reader.read_line(&mut line_buf).await {
-                Ok(0) => break,
-                Ok(_) => match line_buf.trim() {
+            let readline = repl.readline(">> ");
+            match readline {
+                Ok(line) => match line.trim() {
                     "create room" => {
                         let room = create_room(
                             State(state.clone()),
@@ -44,8 +40,12 @@ pub async fn cli_loop(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
                         println!("Unknown command: {unknown}.");
                     }
                 },
-                Err(e) => {
-                    eprintln!("CLI read error: {e}");
+                Err(ReadlineError::Interrupted) => {
+                    println!("CTRL-C");
+                    break;
+                }
+                Err(err) => {
+                    eprintln!("Error: {:?}", err);
                     break;
                 }
             }
