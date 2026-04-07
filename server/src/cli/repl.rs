@@ -5,10 +5,7 @@ use crate::{
 use axum::extract::State;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use std::sync::Arc;
-use tokio::{
-    io::{self, AsyncBufReadExt, BufReader, Stdin},
-    task::JoinHandle,
-};
+use tokio::task::JoinHandle;
 
 pub async fn init_repl(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
     tokio::task::spawn(async move {
