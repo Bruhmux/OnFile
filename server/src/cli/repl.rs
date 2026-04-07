@@ -5,10 +5,7 @@ use crate::{
 use axum::extract::State;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use std::sync::Arc;
-use tokio::{
-    sync::{broadcast, watch},
-    task::JoinHandle,
-};
+use tokio::{sync::watch, task::JoinHandle};
 
 pub async fn init_repl(
     State(state): State<Arc<AppState>>,

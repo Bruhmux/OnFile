@@ -7,11 +7,7 @@ use axum::{
     routing::{get, post},
 };
 use std::{net::SocketAddr, sync::Arc};
-use tokio::{
-    spawn,
-    sync::{broadcast, watch},
-    task::JoinHandle,
-};
+use tokio::{spawn, sync::watch, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 pub async fn create_app(

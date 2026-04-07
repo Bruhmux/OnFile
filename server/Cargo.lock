@@ -3,26 +3,6 @@
 version = 4
 
 [[package]]
-name = "truths_and_tombs"
-version = "0.1.0"
-dependencies = [
- "async-scoped",
- "axum",
- "chrono",
- "clap",
- "dotenv",
- "rand 0.10.0",
- "rustyline",
- "serde",
- "sqlx",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2128,6 +2108,26 @@ dependencies = [
  "thread_local",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "truths_and_tombs"
+version = "0.1.0"
+dependencies = [
+ "async-scoped",
+ "axum",
+ "chrono",
+ "clap",
+ "dotenv",
+ "rand 0.10.0",
+ "rustyline",
+ "serde",
+ "sqlx",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
