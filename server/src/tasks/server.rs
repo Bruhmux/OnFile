@@ -1,15 +1,22 @@
-use crate::{db::types::AppState, handlers::room::create_room, routes::checkhealth};
+use crate::{
+    cli::options::Args, db::types::AppState, handlers::room::create_room, routes::checkhealth,
+};
 use axum::{
     Router,
     http::HeaderValue,
     routing::{get, post},
 };
 use std::{net::SocketAddr, sync::Arc};
-use tokio::{spawn, task::JoinHandle};
+use tokio::{spawn, sync::watch, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
+pub async fn create_app(
+    state: Arc<AppState>,
+    launch_opts: Args,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> JoinHandle<()> {
     spawn(async move {
+        let origin = format!("http://{}:{}", launch_opts.addr, launch_opts.port);
         let cors =
             CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
 
@@ -27,7 +34,12 @@ pub async fn create_app(state: Arc<AppState>) -> JoinHandle<()> {
             .await
             .expect("Failed to bind socket");
 
-        axum::serve(listener, app).await.expect("Server Error");
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                shutdown_rx.changed().await.ok();
+            })
+            .await
+            .expect("Server Error");
     })
 }
 

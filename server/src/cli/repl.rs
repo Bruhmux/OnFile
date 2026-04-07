@@ -5,12 +5,12 @@ use crate::{
 use axum::extract::State;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use std::sync::Arc;
-use tokio::{
-    io::{self, AsyncBufReadExt, BufReader, Stdin},
-    task::JoinHandle,
-};
+use tokio::{sync::watch, task::JoinHandle};
 
-pub async fn cli_loop(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
+pub async fn init_repl(
+    State(state): State<Arc<AppState>>,
+    shutdown_tx: watch::Sender<bool>,
+) -> JoinHandle<()> {
     tokio::task::spawn(async move {
         let mut repl = DefaultEditor::new().expect("Unable to initiate REPL");
         loop {
@@ -31,6 +31,8 @@ pub async fn cli_loop(State(state): State<Arc<AppState>>) -> JoinHandle<()> {
                     }
                     "quit" => {
                         println!("Shutting down...");
+                        shutdown_tx.send(true).ok();
+                        break;
                     }
                     "status" => {
                         println!("Running on http://127.0.0.1:3000");
