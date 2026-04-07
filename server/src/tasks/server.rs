@@ -1,5 +1,5 @@
 use crate::{
-    cli::options::Opt, db::types::AppState, handlers::room::create_room, routes::checkhealth,
+    cli::options::Args, db::types::AppState, handlers::room::create_room, routes::checkhealth,
 };
 use axum::{
     Router,
@@ -11,7 +11,7 @@ use std::{fmt::format, net::SocketAddr, sync::Arc};
 use tokio::{spawn, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-pub async fn create_app(state: Arc<AppState>, launch_opts: Opt) -> JoinHandle<()> {
+pub async fn create_app(state: Arc<AppState>, launch_opts: Args) -> JoinHandle<()> {
     spawn(async move {
         let origin = format!("http://{}:{}", launch_opts.addr, launch_opts.port);
         let cors =

@@ -1,10 +1,11 @@
-#![allow(dead_code, unused)]
+// #![allow(dead_code, unused)]
 use crate::{
-    cli::options::Opt,
+    cli::{options::Args, repl::init_repl},
     db::{init::init_connection, types::AppState},
     tasks::server::{create_app, init_db},
 };
 use axum::extract::State;
+use clap::Parser;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::{join, sync::broadcast};
@@ -18,7 +19,7 @@ mod types;
 
 #[tokio::main]
 async fn main() {
-    let launch_options = Opt.parse();
+    let args = Args::parse();
 
     tracing_subscriber::fmt::init();
 
@@ -29,9 +30,9 @@ async fn main() {
         .expect("Failed to connect to database");
     let app_state = Arc::new(AppState { db: pool });
 
-    init_db(app_state.clone());
+    init_db(app_state.clone()).await;
     //     Server Start
-    let app_server = create_app(app_state.clone(), launch_options);
+    let app_server = create_app(app_state.clone(), args);
     let cli_task = init_repl(State(app_state));
 
     join!(app_server, cli_task);
