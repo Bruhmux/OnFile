@@ -29,7 +29,7 @@ pub async fn create_room(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateRoomRequest>,
 ) -> Result<Json<CreateRoomResponse>, axum::http::StatusCode> {
-    const MAX_ATTEMPTS: u8 = 5;
+    const MAX_ATTEMPTS: u8 = 3;
 
     for _ in 0..MAX_ATTEMPTS {
         let room_code = generate_room_code();
