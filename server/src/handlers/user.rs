@@ -19,7 +19,7 @@ pub struct CreateUserResponse {
 pub async fn create_user(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUserRequest>,
-) -> (http::StatusCode, Json<CreateUserResponse>) {
+) -> (Json<CreateUserResponse>, http::StatusCode) {
     // TODO: Verify no duplicate names
     // TODO: SQL insertion using FromRow
 
@@ -32,9 +32,9 @@ pub async fn create_user(
     };
 
     (
-        http::StatusCode::CREATED,
         Json(CreateUserResponse {
             connection_token: new_user.connection_token,
         }),
+        http::StatusCode::CREATED,
     )
 }
