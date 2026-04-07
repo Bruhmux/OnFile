@@ -6,12 +6,19 @@ use axum::{
     http::HeaderValue,
     routing::{get, post},
 };
-use core::fmt;
-use std::{fmt::format, net::SocketAddr, sync::Arc};
-use tokio::{spawn, task::JoinHandle};
+use std::{net::SocketAddr, sync::Arc};
+use tokio::{
+    spawn,
+    sync::{broadcast, watch},
+    task::JoinHandle,
+};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-pub async fn create_app(state: Arc<AppState>, launch_opts: Args) -> JoinHandle<()> {
+pub async fn create_app(
+    state: Arc<AppState>,
+    launch_opts: Args,
+    mut shutdown_rx: watch::Receiver<bool>,
+) -> JoinHandle<()> {
     spawn(async move {
         let origin = format!("http://{}:{}", launch_opts.addr, launch_opts.port);
         let cors =
@@ -31,7 +38,12 @@ pub async fn create_app(state: Arc<AppState>, launch_opts: Args) -> JoinHandle<(
             .await
             .expect("Failed to bind socket");
 
-        axum::serve(listener, app).await.expect("Server Error");
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                shutdown_rx.changed().await.ok();
+            })
+            .await
+            .expect("Server Error");
     })
 }
 

@@ -8,7 +8,7 @@ use axum::extract::State;
 use clap::Parser;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tokio::{join, sync::broadcast};
+use tokio::{join, sync::watch};
 
 mod cli;
 mod db;
@@ -23,7 +23,7 @@ async fn main() {
 
     tracing_subscriber::fmt::init();
 
-    let (shutdown, _) = broadcast::channel::<String>(16);
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
 
     let pool: PgPool = init_connection()
         .await
@@ -32,8 +32,8 @@ async fn main() {
 
     init_db(app_state.clone()).await;
     //     Server Start
-    let app_server = create_app(app_state.clone(), args);
-    let cli_task = init_repl(State(app_state));
+    let app_server = create_app(app_state.clone(), args, shutdown_rx);
+    let cli_task = init_repl(State(app_state), shutdown_tx);
 
     join!(app_server, cli_task);
 }
