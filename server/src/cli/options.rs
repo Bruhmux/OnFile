@@ -1,7 +1,10 @@
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[clap(name = "On File", about = "A multiplayer logical deduction game")]
+#[clap(
+    name = "Truths and Tombs",
+    about = "A medevil multiplayer logical deduction game"
+)]
 pub struct Args {
     /// Set the listening address
     #[clap(short, long, default_value = "127.0.0.1")]
