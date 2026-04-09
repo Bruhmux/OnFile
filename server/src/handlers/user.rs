@@ -1,4 +1,4 @@
-use crate::{AppState, db::tables::User};
+use crate::db::{tables::User, types::AppState};
 use axum::{Json, extract::State, http};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

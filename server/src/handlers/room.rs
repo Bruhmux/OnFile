@@ -5,17 +5,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-#[derive(Deserialize, Debug)]
-pub struct CreateRoomRequest {
-    pub display_name: String,
-}
-
-#[derive(Serialize, Debug)]
-pub struct CreateRoomResponse {
-    pub room_id: Uuid,
-    pub room_code: String,
-}
-
 fn generate_room_code() -> String {
     rand::rng()
         .sample_iter(&Alphabetic)
@@ -61,4 +50,22 @@ pub async fn create_room(
         }
     }
     Err(http::StatusCode::CONFLICT) // impressive if you made it this, go buy a lottery ticket
+}
+
+pub async fn delete_room(State(state): State<AppState>, Json(payload): Json) -> RetType {
+    todo!();
+}
+
+#[derive(Serialize, Debug)]
+pub struct DeleteRoomRequest {}
+
+#[derive(Deserialize, Debug)]
+pub struct CreateRoomRequest {
+    pub display_name: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct CreateRoomResponse {
+    pub room_id: Uuid,
+    pub room_code: String,
 }
