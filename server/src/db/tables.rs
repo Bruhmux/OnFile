@@ -14,33 +14,32 @@ pub struct User {
 
 #[derive(sqlx::FromRow)]
 pub struct Room {
-    id: Uuid,
-    join_code: [u8; 5],
-    name: String,
-    grid: Json<LogicGrid>,
+    pub id: [u8; 5],
+    pub name: String,
+    pub grid: Json<LogicGrid>,
 }
 
 #[derive(sqlx::FromRow)]
-struct Participants {
-    room_id: Uuid,
+struct Participant {
+    room_id: [u8; 5],
     user_id: Uuid,
     joined_at: DateTime<Utc>,
     is_host: bool,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct game_state {
+pub struct GameState {
     room_id: Uuid,
 }
 
 #[derive(sqlx::FromRow)]
-pub struct clues {}
+pub struct Clue {}
 
 #[derive(sqlx::FromRow)]
-pub struct logic_grid {}
+pub struct LogicGrid {}
 
 #[derive(sqlx::FromRow)]
-pub struct grid_cell {}
+pub struct GridCell {}
 
 #[derive(sqlx::FromRow)]
-pub struct actions {}
+pub struct Action {}
