@@ -1,9 +1,13 @@
-use crate::db::types::AppState;
-use axum::{Json, extract::State, http};
+use crate::db::{tables::Room, types::AppState};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::{self, StatusCode},
+};
 use rand::{RngExt, distr::Alphabetic};
 use serde::{Deserialize, Serialize};
+use sqlx::query;
 use std::sync::Arc;
-use uuid::Uuid;
 
 fn generate_room_code() -> String {
     rand::rng()
@@ -16,30 +20,26 @@ fn generate_room_code() -> String {
 
 pub async fn create_room(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<CreateRoomRequest>,
+    Path(display_name): Path<String>,
 ) -> Result<Json<CreateRoomResponse>, axum::http::StatusCode> {
     const MAX_ATTEMPTS: u8 = 3;
 
-    for _ in 0..MAX_ATTEMPTS {
-        let room_code = generate_room_code();
-        let insert_result = sqlx::query!(
-            r#"
-            INSERT INTO rooms (room_code, display_name)
+    let query = r#"
+            INSERT INTO rooms (id, display_name)
             VALUES ($1, $2)
-            RETURNING id, room_code
-            "#,
-            room_code,
-            payload.display_name
-        )
-        .fetch_one(&state.db)
-        .await;
+            "#;
+
+    for _ in 0..MAX_ATTEMPTS {
+        let room_id = generate_room_code();
+        let insert_result: Result<_, sqlx::Error> = sqlx::query(query)
+            .bind(room_id)
+            .bind(display_name)
+            .execute(&state.db)
+            .await;
 
         match insert_result {
             Ok(row) => {
-                return Ok(Json(CreateRoomResponse {
-                    room_id: row.id,
-                    room_code: row.room_code,
-                }));
+                return Ok(Json(CreateRoomResponse { room_id: row.id }));
             }
             Err(sqlx::Error::Database(db_err))
                 if db_err.constraint() == Some("rooms_room_code_key") =>
@@ -52,12 +52,18 @@ pub async fn create_room(
     Err(http::StatusCode::CONFLICT) // impressive if you made it this, go buy a lottery ticket
 }
 
-pub async fn delete_room(State(state): State<AppState>, Json(payload): Json) -> RetType {
-    todo!();
+pub async fn delete_room(
+    State(state): State<AppState>,
+    Path(room_code): Path<String>,
+) -> StatusCode {
+    match query!("DELETE from rooms WHERE id = $1", room_code)
+        .execute(&state.db)
+        .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }
-
-#[derive(Serialize, Debug)]
-pub struct DeleteRoomRequest {}
 
 #[derive(Deserialize, Debug)]
 pub struct CreateRoomRequest {
@@ -66,6 +72,5 @@ pub struct CreateRoomRequest {
 
 #[derive(Serialize, Debug)]
 pub struct CreateRoomResponse {
-    pub room_id: Uuid,
-    pub room_code: String,
+    pub room_id: String,
 }
