@@ -1,8 +1,7 @@
-use crate::db::{tables::User, types::AppState};
+use crate::{db::tables::User, state::AppState};
 use axum::{Json, extract::State, http};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -17,7 +16,7 @@ pub struct CreateUserResponse {
 }
 
 pub async fn create_user(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Json(payload): Json<CreateUserRequest>,
 ) -> (Json<CreateUserResponse>, http::StatusCode) {
     // TODO: Verify no duplicate names
