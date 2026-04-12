@@ -1,16 +1,39 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "category", rename_all = "lowercase")]
+pub enum Category {
+    Suspect,
+    Weapon,
+    Location,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Clue {
+    pub id: Uuid,
+    pub room_id: String,
+    pub x_category: Category,
+    pub x_idx: i32,
+    pub y_category: Category,
+    pub y_idx: i32,
+    pub is_true: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Discovery {
+    pub id: Uuid,
+    pub player_id: Uuid,
+    pub room_id: String,
+    pub clue_id: Uuid,
+}
 
 #[derive(Serialize)]
 pub struct LogicGrid {
-    suspect_weapon: [[Option<bool>; 8]; 8],
-    suspect_location: [[Option<bool>; 8]; 8],
-    weapon_location: [[Option<bool>; 8]; 8],
-}
-
-enum EvidenceError {
-    SameType,
-    Invalid,
+    pub suspect_weapon: [[Option<bool>; 8]; 8],
+    pub suspect_location: [[Option<bool>; 8]; 8],
+    pub weapon_location: [[Option<bool>; 8]; 8],
 }
 
 impl LogicGrid {
@@ -22,35 +45,30 @@ impl LogicGrid {
         }
     }
 
-    pub fn add_evidence<T, U>(
-        &mut self,
-        item1: T,
-        item2: U,
-        is_verified: bool,
-    ) -> Result<(), EvidenceError>
-    where
-        T: Evidence,
-        U: Evidence,
-    {
-        let i = item1.index();
-        let j = item2.index();
-
-        if item1.category() == item2.category() {
-            return Err(EvidenceError::SameType);
+    pub fn from_clues(clues: Vec<Clue>) -> Self {
+        let mut grid = Self::new();
+        for clue in clues {
+            grid.apply_clue(&clue);
         }
-        match (item1.category(), item2.category()) {
-            ("Suspect", "Weapon") => self.suspect_weapon[i][j] = Some(is_verified),
-            ("Weapon", "Suspect") => self.suspect_weapon[j][i] = Some(is_verified),
+        grid
+    }
 
-            ("Suspect", "Location") => self.suspect_location[i][j] = Some(is_verified),
-            ("Location", "Suspect") => self.suspect_location[j][i] = Some(is_verified),
+    fn apply_clue(&mut self, clue: &Clue) {
+        let i = clue.x_idx as usize;
+        let j = clue.y_idx as usize;
+        let val = Some(clue.is_true);
 
-            ("Weapon", "Location") => self.weapon_location[i][j] = Some(is_verified),
-            ("Location", "Weapon") => self.weapon_location[j][i] = Some(is_verified),
+        match (&clue.x_category, &clue.y_category) {
+            (Category::Suspect, Category::Weapon) => self.suspect_weapon[i][j] = val,
+            (Category::Weapon, Category::Suspect) => self.suspect_weapon[j][i] = val,
 
-            _ => return Err(EvidenceError::Invalid),
+            (Category::Suspect, Category::Location) => self.suspect_location[i][j] = val,
+            (Category::Location, Category::Suspect) => self.suspect_location[j][i] = val,
+
+            (Category::Weapon, Category::Location) => self.weapon_location[i][j] = val,
+            (Category::Location, Category::Weapon) => self.weapon_location[j][i] = val,
+            _ => {}
         }
-        Ok(())
     }
 }
 
