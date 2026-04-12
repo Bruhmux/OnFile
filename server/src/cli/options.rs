@@ -1,6 +1,6 @@
 use clap::Parser;
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, Clone)]
 #[clap(
     name = "Truths and Tombs",
     about = "A medevil multiplayer logical deduction game"
