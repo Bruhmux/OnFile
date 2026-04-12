@@ -1,39 +1,27 @@
-// #![allow(dead_code, unused)]
-use crate::{
-    cli::{options::Args, repl::init_repl},
-    db::{init::init_connection, types::AppState},
-    tasks::server::{create_app, init_db},
-};
 use axum::extract::State;
-use clap::Parser;
-use sqlx::PgPool;
-use std::sync::Arc;
+use crypts_and_clues::{
+    cli::repl::init_repl, config::init_config, db::init_connection, state::AppState,
+    tasks::server::assemble_app,
+};
 use tokio::{join, sync::watch};
-
-mod cli;
-mod db;
-mod handlers;
-mod routes;
-mod tasks;
-mod types;
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-
     tracing_subscriber::fmt::init();
 
+    let app_config = init_config().await;
+
+    let app_state = AppState {
+        db: init_connection(app_config.clone())
+            .await
+            .expect("Error initializing database connection"),
+
+        config: app_config,
+    };
+
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    let app_server = assemble_app(app_state.clone(), shutdown_rx);
+    let cli_loop = init_repl(State(app_state.clone()), shutdown_tx);
 
-    let pool: PgPool = init_connection()
-        .await
-        .expect("Failed to connect to database");
-    let app_state = Arc::new(AppState { db: pool });
-
-    init_db(app_state.clone()).await;
-    //     Server Start
-    let app_server = create_app(app_state.clone(), args, shutdown_rx);
-    let cli_task = init_repl(State(app_state), shutdown_tx);
-
-    join!(app_server, cli_task);
+    join!(app_server, cli_loop);
 }
