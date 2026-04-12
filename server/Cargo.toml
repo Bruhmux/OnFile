@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 async-scoped = { version = "0.9.0", features = ["use-tokio"] }
-axum = { version = "0.8.8", features = ["json"] }
+axum = { version = "0.8.8", features = ["json", "axum-macros"] }
 chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.6.0", features = ["derive"] }
 dotenvy = { version = "0.15.7", features = ["cli", "clap"] }
