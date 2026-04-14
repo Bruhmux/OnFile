@@ -1,4 +1,3 @@
-use crate::types::Category;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, types::Uuid};
@@ -28,7 +27,7 @@ pub struct RoomParticipant {
     pub joined_at: DateTime<Utc>,
     pub is_host: bool,
 }
-#[derive(sqlx::Type, Debug, Serialize, Deserialize)]
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
 #[sqlx(type_name = "game_status", rename_all = "snake_case")]
 pub enum GameStatus {
     Open,
@@ -43,4 +42,31 @@ pub struct GameState {
     pub current_turn_user: Option<Uuid>,
     pub started_at: Option<DateTime<Utc>>,
     pub ended_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "category", rename_all = "lowercase")]
+pub enum Category {
+    Suspect,
+    Weapon,
+    Location,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Clue {
+    pub id: Uuid,
+    pub room_id: String,
+    pub x_category: Category,
+    pub x_idx: i32,
+    pub y_category: Category,
+    pub y_idx: i32,
+    pub is_true: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Discovery {
+    pub id: Uuid,
+    pub player_id: Uuid,
+    pub room_id: String,
+    pub clue_id: Uuid,
 }
