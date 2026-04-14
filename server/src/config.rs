@@ -42,7 +42,7 @@ pub async fn init_config() -> Arc<Config> {
     let server_config = ServerConfig {
         host: env::var("HOST")
             .unwrap_or_else(|_| {
-                info!("PORT not set in env... using cli options");
+                info!("HOST not set in env... using cli options");
                 args.addr
             })
             .parse()

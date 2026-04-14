@@ -14,7 +14,7 @@ use rustyline::{DefaultEditor, error::ReadlineError};
 use tokio::{sync::watch, task::JoinHandle};
 use uuid::Uuid;
 
-pub async fn init_repl(
+pub fn init_repl(
     State(state): State<AppState>,
     shutdown_tx: watch::Sender<bool>,
 ) -> JoinHandle<()> {
@@ -39,7 +39,7 @@ pub async fn init_repl(
                             )
                             .await
                             {
-                                Ok(_) => println!("Created user: {:?}", display_name),
+                                Ok(user) => println!("Created user: {:?}", user.into_response()),
                                 Err(e) => eprintln!("Error creating user: {:?}", e),
                             }
                         }
