@@ -1,10 +1,10 @@
-use crate::{api::routes::make_routes, state::AppState};
-use axum::{Router, http::HeaderValue, response::IntoResponse, routing::get};
+use crate::{api::routes::make, state::AppState};
+use axum::{Router, http::HeaderValue, response::IntoResponse};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 pub fn make_app(state: AppState) -> Router {
     Router::new()
-        .nest("/api", make_routes())
+        .nest("/api", make())
         .fallback_service(ServeDir::new("client/dist"))
         .layer(make_cors())
         .with_state(state)
