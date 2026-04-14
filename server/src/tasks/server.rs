@@ -1,37 +1,32 @@
 use crate::{
-    api::{handlers::room::create_room, init::make_app},
-    cli::options::Args,
-    routes::checkhealth,
+    api::{self, init::make_app},
     state::AppState,
 };
-use axum::{
-    Router,
-    http::HeaderValue,
-    routing::{get, post},
-};
+use axum::{Router, http::HeaderValue};
 use std::net::SocketAddr;
 use tokio::{spawn, sync::watch, task::JoinHandle};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::info;
 
-pub async fn create_app(
-    state: AppState,
-    launch_opts: Args,
-    mut shutdown_rx: watch::Receiver<bool>,
-) -> JoinHandle<()> {
+pub async fn create_app(state: AppState, mut shutdown_rx: watch::Receiver<bool>) -> JoinHandle<()> {
     spawn(async move {
-        let origin = format!("http://{}:{}", launch_opts.addr, launch_opts.port);
-        let cors =
-            CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap());
+        let origin = format!(
+            "http://{}:{}",
+            state.config.server_host(),
+            state.config.server_port()
+        );
+        let cors = CorsLayer::new().allow_origin(origin.parse::<HeaderValue>().unwrap());
 
+        let addr = SocketAddr::from((
+            *state.clone().config.server_host(),
+            state.clone().config.server_port(),
+        ));
         let app: Router = Router::new()
             .fallback_service(ServeDir::new("client/dist"))
             .layer(cors)
-            .route("/", get(checkhealth))
-            .route("/room/create", post(create_room))
+            .nest("/api", api::routes::make())
             .with_state(state);
 
-        let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
         println!("Listening on {addr}");
 
         let listener = tokio::net::TcpListener::bind(addr)

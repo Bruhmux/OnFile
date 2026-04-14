@@ -7,6 +7,7 @@ use clap::Parser;
 )]
 pub struct Args {
     /// Set the listening address
+    /// IPv4 only
     #[clap(short, long, default_value = "127.0.0.1")]
     pub addr: String,
 
