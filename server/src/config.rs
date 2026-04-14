@@ -2,6 +2,7 @@ use crate::cli;
 use clap::Parser;
 use dotenvy::dotenv;
 use std::{env, net::Ipv4Addr, sync::Arc};
+use tracing::info;
 
 #[derive(Debug)]
 struct ServerConfig {
@@ -40,13 +41,19 @@ pub async fn init_config() -> Arc<Config> {
 
     let server_config = ServerConfig {
         host: env::var("HOST")
-            .unwrap_or(args.addr)
+            .unwrap_or_else(|_| {
+                info!("PORT not set in env... using cli options");
+                args.addr
+            })
             .parse()
             .expect("Must be a numerical Ipv4 address (127.0.0.1 default)"),
         port: env::var("PORT")
-            .expect("PORT not set in env... using cli options")
-            .parse::<u16>()
-            .unwrap_or(args.port),
+            .unwrap_or_else(|_| {
+                info!("PORT not set in env... using cli options");
+                args.port.to_string()
+            })
+            .parse()
+            .expect("PORT must be a valid u16"),
     };
 
     let database_config = DatabaseConfig {
