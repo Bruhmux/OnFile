@@ -9,6 +9,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(room::list))
         .route("/", post(room::create))
-        .route("/:id/join", post(room::join))
-        .route("/:room_code", delete(room::delete_room))
+        .route("/{id}/join", post(room::join))
+        .route("/{room_code}", delete(room::delete_room))
 }

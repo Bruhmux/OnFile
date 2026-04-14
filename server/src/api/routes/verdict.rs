@@ -1,9 +1,9 @@
-use axum::{routing::post, Router};
 use crate::state::AppState;
+use axum::{Router, routing::post};
 // Assuming a future verdict handler
-// use crate::api::handlers::verdict; 
+// use crate::api::handlers::verdict;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        // .route("/:room_id/solve", post(verdict::solve))
+    // .route("/{room_id}/solve", post(verdict::solve))
 }
