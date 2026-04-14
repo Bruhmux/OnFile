@@ -6,7 +6,7 @@ pub mod discovery;
 pub mod room;
 pub mod verdict;
 
-pub fn make_routes() -> Router<AppState> {
+pub fn make() -> Router<AppState> {
     Router::new()
         .nest("/rooms", room::router())
         .nest("/clues", clue::router())
