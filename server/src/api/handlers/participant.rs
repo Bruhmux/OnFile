@@ -1,7 +1,15 @@
-use axum::extract::State;
+use crate::{state::AppState, types::AppError};
+use axum::{
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
+use uuid::Uuid;
 
-use crate::state::AppState;
-
-pub async fn add_participant(State(state): State<AppState>) {
-    // TODO:
+pub async fn add_participant(
+    State(state): State<AppState>,
+    Path(room_id): Path<Uuid>,
+    Query(player_id): Query<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    Err::<StatusCode, AppError>(AppError::Internal("Not implemented".to_string()))
 }

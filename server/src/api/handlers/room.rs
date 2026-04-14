@@ -1,12 +1,14 @@
-use crate::{db::tables::Room, state::AppState};
+use crate::{db::tables::Room, state::AppState, types::AppError};
 use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
+    response::IntoResponse,
 };
 use rand::{RngExt, distr::Alphabetic};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
+use uuid::Uuid;
 
 fn generate_room_code() -> String {
     rand::rng()
@@ -17,7 +19,7 @@ fn generate_room_code() -> String {
         .to_uppercase()
 }
 
-pub async fn list(State(state): State<AppState>) -> Result<Json<Vec<Room>>, StatusCode> {
+pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let query = r#"
         SELECT id, display_name, created_at, is_active 
         FROM rooms 
@@ -25,10 +27,7 @@ pub async fn list(State(state): State<AppState>) -> Result<Json<Vec<Room>>, Stat
         LIMIT 30
         "#;
 
-    let rooms = query_as::<_, Room>(query)
-        .fetch_all(&state.db)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let rooms = query_as::<_, Room>(query).fetch_all(&state.db).await?;
 
     Ok(Json(rooms))
 }
@@ -36,7 +35,7 @@ pub async fn list(State(state): State<AppState>) -> Result<Json<Vec<Room>>, Stat
 pub async fn create(
     State(state): State<AppState>,
     Json(payload): Json<CreateRoomRequest>,
-) -> Result<(StatusCode, Json<CreateRoomResponse>), StatusCode> {
+) -> Result<impl IntoResponse, AppError> {
     const MAX_ATTEMPTS: u8 = 3;
 
     for _ in 0..MAX_ATTEMPTS {
@@ -58,29 +57,58 @@ pub async fn create(
                         continue;
                     }
                 }
-                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                return Err(AppError::Database(e));
             }
         }
     }
-    Err(StatusCode::CONFLICT)
+    Err(AppError::Conflict(
+        "Failed to generate a unique room code".to_string(),
+    ))
 }
 
-pub async fn join(State(state): State<AppState>, Path(room_code): Path<String>) -> StatusCode {
-    todo!() // TODO:
+pub async fn join(
+    State(state): State<AppState>,
+    Path(room_code): Path<String>,
+    Json(payload): Json<JoinRoomRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    // 1. Verify room exists
+    let room_exists = sqlx::query("SELECT 1 FROM rooms WHERE id = $1")
+        .bind(&room_code)
+        .fetch_optional(&state.db)
+        .await?
+        .is_some();
+
+    if !room_exists {
+        return Err(AppError::NotFound(format!("Room {} not found", room_code)));
+    }
+
+    // 2. Add participant (idempotent)
+    sqlx::query(
+        "INSERT INTO room_participants (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+    )
+    .bind(&room_code)
+    .bind(&payload.user_id)
+    .execute(&state.db)
+    .await?;
+
+    Ok(StatusCode::OK)
+}
+
+#[derive(Deserialize)]
+pub struct JoinRoomRequest {
+    pub user_id: Uuid,
 }
 
 pub async fn delete_room(
     State(state): State<AppState>,
     Path(room_code): Path<String>,
-) -> StatusCode {
-    match query("DELETE from rooms WHERE id = $1")
+) -> Result<impl IntoResponse, AppError> {
+    query("DELETE from rooms WHERE id = $1")
         .bind(room_code)
         .execute(&state.db)
-        .await
-    {
-        Ok(_) => StatusCode::NO_CONTENT,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    }
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize, Debug)]

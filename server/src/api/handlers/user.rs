@@ -1,16 +1,15 @@
-use crate::{db::tables::User, state::AppState};
-use axum::{Json, extract::State, http};
+use crate::{db::tables::User, state::AppState, types::AppError};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct CreateUserRequest {
-    display_name: String,
-    room_id: Uuid,
+    pub display_name: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct CreateUserResponse {
     connection_token: Uuid,
 }
@@ -18,7 +17,7 @@ pub struct CreateUserResponse {
 pub async fn create_user(
     State(state): State<AppState>,
     Json(payload): Json<CreateUserRequest>,
-) -> (Json<CreateUserResponse>, http::StatusCode) {
+) -> Result<impl IntoResponse, AppError> {
     // TODO: Verify no duplicate names
     // TODO: SQL insertion using FromRow
 
@@ -30,10 +29,10 @@ pub async fn create_user(
         last_heartbeat: Utc::now(),
     };
 
-    (
+    Ok((
+        StatusCode::CREATED,
         Json(CreateUserResponse {
             connection_token: new_user.connection_token,
         }),
-        http::StatusCode::CREATED,
-    )
+    ))
 }

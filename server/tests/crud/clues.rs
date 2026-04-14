@@ -1,19 +1,30 @@
-use crypts_and_clues::db::tables::Clue;
+use crypts_and_clues::db::tables::{Category, Clue};
 use sqlx::PgPool;
 
 #[sqlx::test]
 async fn test_clue_crud(pool: PgPool) {
-    sqlx::query("INSERT INTO rooms (id, display_name) VALUES ('CLUE1', 'Test')").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO rooms (id, display_name) VALUES ('TEST1', 'Test Room')")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     let clue = sqlx::query_as::<_, Clue>(
-        "INSERT INTO clues (room_id, clue_order, clue_text) VALUES ($1, $2, $3) RETURNING *"
+        r#"
+        INSERT INTO clues (room_id, x_category, x_idx, y_category, y_idx, is_true) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *
+        "#,
     )
-    .bind("CLUE1")
+    .bind("TEST1")
+    .bind(Category::Suspect)
+    .bind(0)
+    .bind(Category::Weapon)
     .bind(1)
-    .bind("The suspect wore a hat")
+    .bind(true)
     .fetch_one(&pool)
     .await
     .unwrap();
 
-    assert_eq!(clue.clue_text, "The suspect wore a hat");
+    assert_eq!(clue.x_idx, 0);
+    assert!(clue.is_true);
 }

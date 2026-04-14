@@ -1,32 +1,46 @@
+use crate::db::tables::{Category, Clue};
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "category", rename_all = "lowercase")]
-pub enum Category {
-    Suspect,
-    Weapon,
-    Location,
+#[derive(Debug)]
+pub enum AppError {
+    Database(sqlx::Error),
+    NotFound(String),
+    Conflict(String),
+    Forbidden(String),
+    Internal(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Clue {
-    pub id: Uuid,
-    pub room_id: String,
-    pub x_category: Category,
-    pub x_idx: i32,
-    pub y_category: Category,
-    pub y_idx: i32,
-    pub is_true: bool,
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            AppError::Database(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", err),
+            ),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
+            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+        };
+
+        let body = Json(serde_json::json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Discovery {
-    pub id: Uuid,
-    pub player_id: Uuid,
-    pub room_id: String,
-    pub clue_id: Uuid,
+impl From<sqlx::Error> for AppError {
+    fn from(err: sqlx::Error) -> Self {
+        AppError::Database(err)
+    }
 }
 
 #[derive(Serialize)]
@@ -81,7 +95,7 @@ struct File {
 }
 
 trait Evidence {
-    fn index(&self) -> usize;
+    fn index(&self) -> u8;
     fn category(&self) -> &'static str;
 }
 
@@ -187,8 +201,8 @@ impl Evidence for Suspect {
     fn category(&self) -> &'static str {
         "Suspect"
     }
-    fn index(&self) -> usize {
-        *self as usize
+    fn index(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -196,8 +210,8 @@ impl Evidence for Weapon {
     fn category(&self) -> &'static str {
         "Weapon"
     }
-    fn index(&self) -> usize {
-        *self as usize
+    fn index(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -205,7 +219,7 @@ impl Evidence for Location {
     fn category(&self) -> &'static str {
         "Location"
     }
-    fn index(&self) -> usize {
-        *self as usize
+    fn index(&self) -> u8 {
+        *self as u8
     }
 }
