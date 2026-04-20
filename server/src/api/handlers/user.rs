@@ -1,7 +1,8 @@
-use crate::{db::tables::User, state::AppState, types::AppError};
+use crate::{state::AppState, types::AppError};
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sqlx::query;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -18,21 +19,34 @@ pub async fn create_user(
     State(state): State<AppState>,
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<impl IntoResponse, AppError> {
-    // TODO: Verify no duplicate names
-    // TODO: SQL insertion using FromRow
+    let sql = r#"
+        INSERT into users (display_name, connection_token, connected_at, last_heartbeat)
+        VALUES ($1, $2, $3, $4)
+        "#;
 
-    let new_user = User {
-        id: Uuid::new_v4(),
-        display_name: payload.display_name,
-        connection_token: Uuid::new_v4(),
-        connected_at: Utc::now(),
-        last_heartbeat: Utc::now(),
-    };
-
-    Ok((
-        StatusCode::CREATED,
-        Json(CreateUserResponse {
-            connection_token: new_user.connection_token,
-        }),
-    ))
+    let connection_token = Uuid::new_v4();
+    match query(sql)
+        .bind(&payload.display_name)
+        .bind(connection_token)
+        .bind(Utc::now())
+        .bind(Utc::now())
+        .execute(&state.db)
+        .await
+    {
+        Ok(_) => Ok((
+            StatusCode::CREATED,
+            Json(CreateUserResponse { connection_token }),
+        )),
+        Err(err) => {
+            if let Some(db_err) = err.as_database_error()
+                && db_err.code().unwrap_or_default() == "23505"
+            {
+                return Err(AppError::Http(
+                    StatusCode::CONFLICT,
+                    "Display name already taken".to_string(),
+                ));
+            }
+            Err(AppError::Database(err))
+        }
+    }
 }

@@ -1,5 +1,5 @@
 use crate::{api::routes::make, state::AppState};
-use axum::{Router, http::HeaderValue, response::IntoResponse, routing::get};
+use axum::{Router, http::HeaderValue, response::IntoResponse};
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 pub fn make_app(state: AppState) -> Router {
@@ -14,6 +14,6 @@ fn make_cors() -> CorsLayer {
     CorsLayer::new().allow_origin("http://localhost:5432".parse::<HeaderValue>().unwrap())
 }
 
-async fn hello() -> impl IntoResponse {
-    "hello from server!"
+async fn check_health() -> impl IntoResponse {
+    "Crypt n' Clues is running..."
 }

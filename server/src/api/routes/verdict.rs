@@ -1,5 +1,5 @@
 use crate::state::AppState;
-use axum::{Router, routing::post};
+use axum::Router;
 // Assuming a future verdict handler
 // use crate::api::handlers::verdict;
 

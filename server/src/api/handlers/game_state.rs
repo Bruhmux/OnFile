@@ -35,7 +35,7 @@ pub async fn get_grid(
         "#,
     )
     .bind(&room_id)
-    .bind(&dummy_player_id)
+    .bind(dummy_player_id)
     .fetch_all(&state.db)
     .await?;
 
@@ -50,9 +50,9 @@ pub async fn add_mark(
     sqlx::query(
         "INSERT INTO discoveries (player_id, room_id, clue_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
     )
-    .bind(&payload.player_id)
+    .bind(payload.player_id)
     .bind(&room_id)
-    .bind(&payload.clue_id)
+    .bind(payload.clue_id)
     .execute(&state.db)
     .await?;
 
@@ -65,8 +65,8 @@ pub async fn remove_mark(
     Json(payload): Json<AddMarkRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     sqlx::query("DELETE FROM discoveries WHERE player_id = $1 AND clue_id = $2")
-        .bind(&payload.player_id)
-        .bind(&payload.clue_id)
+        .bind(payload.player_id)
+        .bind(payload.clue_id)
         .execute(&state.db)
         .await?;
 
