@@ -62,8 +62,8 @@ impl LogicGrid {
     }
 
     fn apply_clue(&mut self, clue: &Clue) {
-        let i = clue.x_idx;
-        let j = clue.y_idx;
+        let i = clue.x_idx as usize;
+        let j = clue.y_idx as usize;
         let val = Some(clue.is_true);
 
         match (&clue.x_category, &clue.y_category) {
