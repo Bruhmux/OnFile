@@ -52,16 +52,17 @@ pub async fn create(
                 return Ok((StatusCode::CREATED, Json(CreateRoomResponse { room_id })));
             }
             Err(e) => {
-                if let Some(db_err) = e.as_database_error() {
-                    if db_err.constraint() == Some("rooms_pkey") {
-                        continue;
-                    }
+                if let Some(db_err) = e.as_database_error()
+                    && db_err.constraint() == Some("rooms_pkey")
+                {
+                    continue;
                 }
                 return Err(AppError::Database(e));
             }
         }
     }
-    Err(AppError::Conflict(
+    Err(AppError::Http(
+        StatusCode::CONFLICT,
         "Failed to generate a unique room code".to_string(),
     ))
 }
@@ -79,15 +80,18 @@ pub async fn join(
         .is_some();
 
     if !room_exists {
-        return Err(AppError::NotFound(format!("Room {} not found", room_code)));
+        return Err(AppError::Http(
+            StatusCode::NOT_FOUND,
+            format!("Room {} not found", room_code),
+        ));
     }
 
     // 2. Add participant (idempotent)
     sqlx::query(
         "INSERT INTO room_participants (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
     )
-    .bind(&room_code)
-    .bind(&payload.user_id)
+    .bind(room_code)
+    .bind(payload.user_id)
     .execute(&state.db)
     .await?;
 

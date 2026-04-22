@@ -11,5 +11,8 @@ pub async fn add_participant(
     Path(room_id): Path<Uuid>,
     Query(player_id): Query<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    Err::<StatusCode, AppError>(AppError::Internal("Not implemented".to_string()))
+    Err::<StatusCode, AppError>(AppError::Http(
+        StatusCode::NOT_IMPLEMENTED,
+        "Not implemented".into(),
+    ))
 }

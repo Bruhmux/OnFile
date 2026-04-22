@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables)]
 use axum::extract::State;
 use crypts_and_clues::{
     cli::repl::init_repl, config::init_config, db::init_connection, state::AppState,
@@ -5,6 +6,7 @@ use crypts_and_clues::{
 };
 use std::sync::Arc;
 use tokio::{join, sync::watch};
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
@@ -22,8 +24,20 @@ async fn main() {
     };
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    info!("Starting tasks...");
     let app_server = assemble_app(app_state.clone(), shutdown_rx);
-    let cli_loop = init_repl(State(app_state.clone()), shutdown_tx);
+    info!(" >Server running...");
+    let repl_loop = init_repl(State(app_state.clone()), shutdown_tx);
+    info!(" >REPL running...");
 
-    join!(app_server, cli_loop);
+    info!("Joining tasks...");
+
+    join!(app_server, repl_loop);
+
+    // tokio::select! {
+    //     res = app_server => info!("App server task finished: {:?}", res),
+    //     res = repl_loop => info!("CLI loop task finished: {:?}", res),
+    // };
+
+    info!("Main exiting...");
 }

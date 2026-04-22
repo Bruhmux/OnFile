@@ -10,10 +10,7 @@ use std::fmt::Display;
 #[derive(Debug)]
 pub enum AppError {
     Database(sqlx::Error),
-    NotFound(String),
-    Conflict(String),
-    Forbidden(String),
-    Internal(String),
+    Http(StatusCode, String),
 }
 
 impl IntoResponse for AppError {
@@ -23,10 +20,7 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Database error: {}", err),
             ),
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
-            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
-            AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            AppError::Http(status, msg) => (status, msg),
         };
 
         let body = Json(serde_json::json!({
@@ -83,6 +77,12 @@ impl LogicGrid {
             (Category::Location, Category::Weapon) => self.weapon_location[j][i] = val,
             _ => {}
         }
+    }
+}
+
+impl Default for LogicGrid {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

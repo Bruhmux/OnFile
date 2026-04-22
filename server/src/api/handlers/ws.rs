@@ -1,9 +1,10 @@
-use crate::{state::AppState, types::AppError};
+use crate::{db::tables, state::AppState, types::AppError};
 use axum::{
     extract::{
         Path, Query, State,
         ws::{Message, WebSocket, WebSocketUpgrade},
     },
+    http::StatusCode,
     response::IntoResponse,
 };
 use futures::{SinkExt, StreamExt};
@@ -40,10 +41,22 @@ pub async fn handler(
         Some(user) => Ok(ws.on_upgrade(move |socket| {
             handle_socket(socket, state, room_id, user.id, user.display_name)
         })),
-        None => Err(AppError::Forbidden(
+        None => Err(AppError::Http(
+            StatusCode::FORBIDDEN,
             "Invalid token for this room".to_string(),
         )),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", content = "payload")]
+enum ClientRequest {
+    PlaceClue {
+        item1: String,
+        item2: String,
+        is_true: bool,
+    },
+    Chat(String),
 }
 
 async fn handle_socket(
@@ -53,7 +66,6 @@ async fn handle_socket(
     user_id: Uuid,
     display_name: String,
 ) {
-    // 2. Setup broadcast channel for the room
     let tx = state
         .channels
         .entry(room_id.clone())
@@ -65,39 +77,54 @@ async fn handle_socket(
 
     let mut rx = tx.subscribe();
 
-    // 3. Presence: Notify others
     let _ = tx.send(format!("{} joined the room", display_name));
 
-    // 4. Split socket for bidirectional communication
     let (mut sink, mut stream) = socket.split();
 
-    // Outgoing: Broadcast messages to the client
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            if sink.send(Message::Text(msg.into())).await.is_err() {
+            if sink.send(Message::Text(msg)).await.is_err() {
                 break;
             }
         }
     });
 
-    // Incoming: Process client messages
+    // Process incoming messages
     let tx_clone = tx.clone();
     let name_clone = display_name.clone();
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = stream.next().await {
             if let Message::Text(text) = msg {
-                // Broadcast the message to everyone in the room
-                let _ = tx_clone.send(format!("{}: {}", name_clone, text));
+                match serde_json::from_str::<ClientRequest>(&text) {
+                    Ok(req) => match req {
+                        ClientRequest::PlaceClue {
+                            item1,
+                            item2,
+                            is_true,
+                        } => {
+                            // TODO: Resolve identifiers and save to DB
+                            let broadcast_msg = format!(
+                                "{}: Placed clue {} vs {} = {}",
+                                name_clone, item1, item2, is_true
+                            );
+                            let _ = tx_clone.send(broadcast_msg);
+                        }
+                        ClientRequest::Chat(msg) => {
+                            let _ = tx_clone.send(format!("{}: {}", name_clone, msg));
+                        }
+                    },
+                    Err(e) => {
+                        let _ = tx_clone.send(format!("Error parsing message: {}", e));
+                    }
+                }
             }
         }
     });
 
-    // Wait for either task to end (disconnect or error)
     tokio::select! {
         _ = (&mut send_task) => recv_task.abort(),
         _ = (&mut recv_task) => send_task.abort(),
     };
 
-    // 5. Cleanup: Notify others
     let _ = tx.send(format!("{} left the room", display_name));
 }

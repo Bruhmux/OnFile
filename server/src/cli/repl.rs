@@ -1,22 +1,21 @@
 use crate::{
-    db::types::AppState,
-    handlers::{
-        clue::{CreateClueRequest, create_clue, delete_clue, get_clues},
-        game_state::{create_game_state, delete_game_state, get_game_state},
-        participant::{
-            AddParticipantRequest, add_participant, get_participants, remove_participant,
-        },
-        room::{CreateRoomRequest, create_room, delete_room, get_room, update_room},
-        user::{CreateUserRequest, create_user, delete_user, get_user, update_user},
+    api::handlers::{
+        participant::add_participant,
+        room::{CreateRoomRequest, delete_room},
+        user::{CreateUserRequest, create_user},
     },
+    state::AppState,
 };
-use axum::extract::{Path, State};
+use axum::{
+    extract::{Path, Query, State},
+    response::IntoResponse,
+};
 use rustyline::{DefaultEditor, error::ReadlineError};
-use std::sync::Arc;
 use tokio::{sync::watch, task::JoinHandle};
+use uuid::Uuid;
 
-pub async fn init_repl(
-    State(state): State<Arc<AppState>>,
+pub fn init_repl(
+    State(state): State<AppState>,
     shutdown_tx: watch::Sender<bool>,
 ) -> JoinHandle<()> {
     tokio::task::spawn(async move {
@@ -40,192 +39,219 @@ pub async fn init_repl(
                             )
                             .await
                             {
-                                Ok(user) => println!("Created user: {:?}", user),
+                                Ok(user) => println!("Created user: {:?}", user.into_response()),
                                 Err(e) => eprintln!("Error creating user: {:?}", e),
                             }
                         }
 
                         ["get", "user", uuid] => {
-                            match get_user(State(state.clone()), Path(uuid.to_string())).await {
-                                Ok(user) => println!("User: {:?}", user),
-                                Err(e) => eprintln!("Error fetching user: {:?}", e),
-                            }
+                            // TODO:
+                            // match get_user(State(state.clone()), Path(uuid.to_string())).await {
+                            //     Ok(user) => println!("User: {:?}", user),
+                            //     Err(e) => eprintln!("Error fetching user: {:?}", e),
+                            // }
                         }
 
                         ["update", "user", uuid, display_name] => {
-                            match update_user(
-                                State(state.clone()),
-                                Path(uuid.to_string()),
-                                axum::Json(CreateUserRequest {
-                                    display_name: display_name.to_string(),
-                                }),
-                            )
-                            .await
-                            {
-                                Ok(user) => println!("Updated user: {:?}", user),
-                                Err(e) => eprintln!("Error updating user: {:?}", e),
-                            }
+                            // TODO:
+                            // match update_user(
+                            //     State(state.clone()),
+                            //     Path(uuid.to_string()),
+                            //     axum::Json(CreateUserRequest {
+                            //         display_name: display_name.to_string(),
+                            //     }),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(user) => println!("Updated user: {:?}", user),
+                            //     Err(e) => eprintln!("Error updating user: {:?}", e),
+                            // }
                         }
 
                         ["delete", "user", uuid] => {
-                            match delete_user(State(state.clone()), Path(uuid.to_string())).await {
-                                Ok(_) => println!("Deleted user {uuid}"),
-                                Err(e) => eprintln!("Error deleting user: {:?}", e),
-                            }
+                            // TODO:
+                            // match delete_user(State(state.clone()), Path(uuid.to_string())).await {
+                            //     Ok(_) => println!("Deleted user {uuid}"),
+                            //     Err(e) => eprintln!("Error deleting user: {:?}", e),
+                            // }
                         }
 
                         // ── Rooms ────────────────────────────────────────────
-                        ["create", "room", name] => {
-                            match create_room(
-                                State(state.clone()),
-                                axum::Json(CreateRoomRequest {
-                                    name: name.to_string(),
-                                }),
-                            )
-                            .await
-                            {
-                                Ok(room) => println!("Created room: {:?}", room),
-                                Err(e) => eprintln!("Error creating room: {:?}", e),
-                            }
+                        ["create", "room", room_name] => {
+                            // TODO:
+                            // match create_room(
+                            //     State(state.clone()),
+                            //     axum::Json(CreateRoomRequest {
+                            //         display_name: room_name.to_string(),
+                            //     }),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(room) => println!("Created room: {:?}", room),
+                            //     Err(e) => eprintln!("Error creating room: {:?}", e),
+                            // }
                         }
 
                         ["get", "room", room_id] => {
-                            match get_room(State(state.clone()), Path(room_id.to_string())).await {
-                                Ok(room) => println!("Room: {:?}", room),
-                                Err(e) => eprintln!("Error fetching room: {:?}", e),
-                            }
+                            // TODO:
+                            // match get_room(State(state.clone()), Path(room_id.to_string())).await {
+                            //     Ok(room) => println!("Room: {:?}", room),
+                            //     Err(e) => eprintln!("Error fetching room: {:?}", e),
+                            // }
                         }
 
-                        ["update", "room", room_id, name] => {
-                            match update_room(
-                                State(state.clone()),
-                                Path(room_id.to_string()),
-                                axum::Json(CreateRoomRequest {
-                                    name: name.to_string(),
-                                }),
-                            )
-                            .await
-                            {
-                                Ok(room) => println!("Updated room: {:?}", room),
-                                Err(e) => eprintln!("Error updating room: {:?}", e),
-                            }
+                        ["update", "room", room_id, new_room_name] => {
+                            // TODO:
+                            // match update_room(
+                            //     State(state.clone()),
+                            //     Path(room_id.to_string()),
+                            //     axum::Json(CreateRoomRequest {
+                            //         display_name: new_room_name.to_string(),
+                            //     }),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(room) => println!("Updated room: {:?}", room),
+                            //     Err(e) => eprintln!("Error updating room: {:?}", e),
+                            // }
                         }
 
                         ["delete", "room", room_id] => {
                             match delete_room(State(state.clone()), Path(room_id.to_string())).await
                             {
+                                // TODO: delete room by name, list duplicate names by player host
                                 Ok(_) => println!("Deleted room {room_id}"),
                                 Err(e) => eprintln!("Error deleting room: {:?}", e),
                             }
                         }
 
                         // ── Participants ─────────────────────────────────────
-                        ["add", "participant", room_id, user_uuid] => {
+                        ["add", "participant", room_uuid, user_uuid] => {
+                            let Ok(room_id_result) = room_uuid.parse() else {
+                                eprintln!("Unable to parse UUID from provided room_id");
+                                continue;
+                            };
+                            let Ok(user_id_result) = user_uuid.parse() else {
+                                eprintln!("Unable to parse UUID from provided room_id");
+                                continue;
+                            };
                             match add_participant(
                                 State(state.clone()),
-                                axum::Json(AddParticipantRequest {
-                                    room_id: room_id.to_string(),
-                                    user_id: user_uuid.to_string(),
-                                }),
+                                Path(room_id_result),
+                                Query(user_id_result),
                             )
                             .await
                             {
-                                Ok(p) => println!("Added participant: {:?}", p),
+                                Ok(p) => println!(
+                                    "Added participant: {:?}",
+                                    p.into_response().into_body()
+                                ),
                                 Err(e) => eprintln!("Error adding participant: {:?}", e),
                             }
                         }
 
                         ["get", "participants", room_id] => {
-                            match get_participants(State(state.clone()), Path(room_id.to_string()))
-                                .await
-                            {
-                                Ok(list) => println!("Participants: {:?}", list),
-                                Err(e) => eprintln!("Error fetching participants: {:?}", e),
-                            }
+                            // TODO:
+                            // match get_participants(State(state.clone()), Path(room_id.to_string()))
+                            //     .await
+                            // {
+                            //     Ok(list) => println!("Participants: {:?}", list),
+                            //     Err(e) => eprintln!("Error fetching participants: {:?}", e),
+                            // }
                         }
 
                         ["remove", "participant", room_id, user_uuid] => {
-                            match remove_participant(
-                                State(state.clone()),
-                                Path((room_id.to_string(), user_uuid.to_string())),
-                            )
-                            .await
-                            {
-                                Ok(_) => println!("Removed participant {user_uuid} from {room_id}"),
-                                Err(e) => eprintln!("Error removing participant: {:?}", e),
-                            }
+                            // TODO:
+                            // match remove_participant(
+                            //     State(state.clone()),
+                            //     Path((room_id.to_string(), user_uuid.to_string())),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(_) => println!("Removed participant {user_uuid} from {room_id}"),
+                            //     Err(e) => eprintln!("Error removing participant: {:?}", e),
+                            // }
                         }
 
                         // ── Game State ───────────────────────────────────────
                         ["create", "gamestate", room_uuid] => {
-                            match create_game_state(
-                                State(state.clone()),
-                                Path(room_uuid.to_string()),
-                            )
-                            .await
-                            {
-                                Ok(gs) => println!("Created game state: {:?}", gs),
-                                Err(e) => eprintln!("Error creating game state: {:?}", e),
-                            }
+                            // TODO:
+                            // match create_game_state(
+                            //     State(state.clone()),
+                            //     Path(room_uuid.to_string()),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(gs) => println!("Created game state: {:?}", gs),
+                            //     Err(e) => eprintln!("Error creating game state: {:?}", e),
+                            // }
                         }
 
                         ["get", "gamestate", room_uuid] => {
-                            match get_game_state(State(state.clone()), Path(room_uuid.to_string()))
-                                .await
-                            {
-                                Ok(gs) => println!("Game state: {:?}", gs),
-                                Err(e) => eprintln!("Error fetching game state: {:?}", e),
-                            }
+                            // TODO:
+                            // match get_game_state(State(state.clone()), Path(room_uuid.to_string()))
+                            //     .await
+                            // {
+                            //     Ok(gs) => println!("Game state: {:?}", gs),
+                            //     Err(e) => eprintln!("Error fetching game state: {:?}", e),
+                            // }
                         }
 
                         ["delete", "gamestate", room_uuid] => {
-                            match delete_game_state(
-                                State(state.clone()),
-                                Path(room_uuid.to_string()),
-                            )
-                            .await
-                            {
-                                Ok(_) => println!("Deleted game state for room {room_uuid}"),
-                                Err(e) => eprintln!("Error deleting game state: {:?}", e),
-                            }
+                            // TODO:
+                            // match delete_game_state(
+                            //     State(state.clone()),
+                            //     Path(room_uuid.to_string()),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(_) => println!("Deleted game state for room {room_uuid}"),
+                            //     Err(e) => eprintln!("Error deleting game state: {:?}", e),
+                            // }
                         }
 
                         // ── Clues ────────────────────────────────────────────
                         ["create", "clue", room_uuid, text] => {
-                            match create_clue(
-                                State(state.clone()),
-                                axum::Json(CreateClueRequest {
-                                    room_id: room_uuid.to_string(),
-                                    text: text.to_string(),
-                                }),
-                            )
-                            .await
-                            {
-                                Ok(clue) => println!("Created clue: {:?}", clue),
-                                Err(e) => eprintln!("Error creating clue: {:?}", e),
-                            }
+                            // TODO:
+                            // match create_clue(
+                            //     State(state.clone()),
+                            //     axum::Json(CreateClueRequest {
+                            //         room_id: room_uuid.to_string(),
+                            //         text: text.to_string(),
+                            //     }),
+                            // )
+                            // .await
+                            // {
+                            //     Ok(clue) => println!("Created clue: {:?}", clue),
+                            //     Err(e) => eprintln!("Error creating clue: {:?}", e),
+                            // }
                         }
 
                         ["get", "clues", room_uuid] => {
-                            match get_clues(State(state.clone()), Path(room_uuid.to_string())).await
-                            {
-                                Ok(clues) => println!("Clues: {:?}", clues),
-                                Err(e) => eprintln!("Error fetching clues: {:?}", e),
-                            }
+                            // TODO:
+                            // match get_clues(State(state.clone()), Path(room_uuid.to_string())).await
+                            // {
+                            //     Ok(clues) => println!("Clues: {:?}", clues),
+                            //     Err(e) => eprintln!("Error fetching clues: {:?}", e),
+                            // }
                         }
 
                         ["delete", "clue", clue_uuid] => {
-                            match delete_clue(State(state.clone()), Path(clue_uuid.to_string()))
-                                .await
-                            {
-                                Ok(_) => println!("Deleted clue {clue_uuid}"),
-                                Err(e) => eprintln!("Error deleting clue: {:?}", e),
-                            }
+                            // match delete_clue(State(state.clone()), Path(clue_uuid.to_string()))
+                            //     .await
+                            // {
+                            //     Ok(_) => println!("Deleted clue {clue_uuid}"),
+                            //     Err(e) => eprintln!("Error deleting clue: {:?}", e),
+                            // }
                         }
 
                         // ── General ──────────────────────────────────────────
                         ["status"] | ["status", ..] => {
-                            println!("Running on {}{}", state.);
+                            println!(
+                                "Running on {}{}",
+                                &state.config.server_host(),
+                                &state.config.server_port()
+                            );
                         }
 
                         ["help"] | ["help", ..] => print_help(),
