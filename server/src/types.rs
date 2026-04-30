@@ -1,41 +1,6 @@
 use crate::db::tables::{Category, Clue};
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-
-#[derive(Debug)]
-pub enum AppError {
-    Database(sqlx::Error),
-    Http(StatusCode, String),
-}
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AppError::Database(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Database error: {}", err),
-            ),
-            AppError::Http(status, msg) => (status, msg),
-        };
-
-        let body = Json(serde_json::json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-impl From<sqlx::Error> for AppError {
-    fn from(err: sqlx::Error) -> Self {
-        AppError::Database(err)
-    }
-}
 
 #[derive(Serialize)]
 pub struct LogicGrid {
@@ -94,14 +59,7 @@ struct File {
     verdict: Verdict,
 }
 
-trait Evidence {
-    fn index(&self) -> u8;
-    fn category(&self) -> &'static str;
-}
-
-trait Coordinate {}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 enum Suspect {
     TavernkeepGarrick,
     KnightRowan,
@@ -113,7 +71,7 @@ enum Suspect {
     MaidAnya,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 enum Weapon {
     WoodenStake,
     BloodyDagger,
@@ -125,7 +83,7 @@ enum Weapon {
     FlacidWand,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 enum Location {
     GuildHall,
     AlchemyLab,
@@ -137,10 +95,86 @@ enum Location {
     MustyCellar,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 enum Verdict {
     Guilty,
     Innocent,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "type", content = "value", rename_all = "lowercase")]
+pub enum Evidence {
+    Suspect(Suspect),
+    Weapon(Weapon),
+    Location(Location),
+}
+
+impl Evidence {
+    pub fn index(self) -> u8 {
+        match self {
+            Self::Suspect(s) => s as u8,
+            Self::Weapon(w) => w as u8,
+            Self::Location(l) => l as u8,
+        }
+    }
+    pub fn type_str(self) -> &'static str {
+        match self {
+            Self::Suspect(_) => "suspect",
+            Self::Weapon(_) => "weapon",
+            Self::Location(_) => "location",
+        }
+    }
+}
+
+impl TryFrom<u8> for Suspect {
+    type Error = ();
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            0 => Ok(Self::TavernkeepGarrick),
+            1 => Ok(Self::KnightRowan),
+            2 => Ok(Self::WizardBjorn),
+            3 => Ok(Self::ThiefJax),
+            4 => Ok(Self::PriestThalos),
+            5 => Ok(Self::AlchemistNox),
+            6 => Ok(Self::LibrarianMildra),
+            7 => Ok(Self::MaidAnya),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<u8> for Weapon {
+    type Error = ();
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            0 => Ok(Self::WoodenStake),
+            1 => Ok(Self::BloodyDagger),
+            2 => Ok(Self::PoisonVial),
+            3 => Ok(Self::RustySword),
+            4 => Ok(Self::StainedGrimoir),
+            5 => Ok(Self::SketchyPortal),
+            6 => Ok(Self::StrangeOoze),
+            7 => Ok(Self::FlacidWand),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<u8> for Location {
+    type Error = ();
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            0 => Ok(Self::GuildHall),
+            1 => Ok(Self::AlchemyLab),
+            2 => Ok(Self::ThroneRoom),
+            3 => Ok(Self::TipsyTavern),
+            4 => Ok(Self::AncientLibrary),
+            5 => Ok(Self::MysticArcanum),
+            6 => Ok(Self::RoyalStables),
+            7 => Ok(Self::MustyCellar),
+            _ => Err(()),
+        }
+    }
 }
 
 impl Display for Suspect {
@@ -194,32 +228,5 @@ impl Display for Verdict {
             Verdict::Guilty => f.write_str("Guilty"),
             Verdict::Innocent => f.write_str("Innocent"),
         }
-    }
-}
-
-impl Evidence for Suspect {
-    fn category(&self) -> &'static str {
-        "Suspect"
-    }
-    fn index(&self) -> u8 {
-        *self as u8
-    }
-}
-
-impl Evidence for Weapon {
-    fn category(&self) -> &'static str {
-        "Weapon"
-    }
-    fn index(&self) -> u8 {
-        *self as u8
-    }
-}
-
-impl Evidence for Location {
-    fn category(&self) -> &'static str {
-        "Location"
-    }
-    fn index(&self) -> u8 {
-        *self as u8
     }
 }

@@ -12,12 +12,8 @@ use axum::{
 };
 use rustyline::{DefaultEditor, error::ReadlineError};
 use tokio::{sync::watch, task::JoinHandle};
-use uuid::Uuid;
 
-pub fn init_repl(
-    State(state): State<AppState>,
-    shutdown_tx: watch::Sender<bool>,
-) -> JoinHandle<()> {
+pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandle<()> {
     tokio::task::spawn(async move {
         let mut repl = DefaultEditor::new().expect("Unable to initiate REPL");
         loop {

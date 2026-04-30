@@ -5,7 +5,7 @@ use axum::{
     routing::{delete, get, post},
 };
 
-pub fn router() -> Router<AppState> {
+pub fn make() -> Router<AppState> {
     Router::new()
         .route("/", get(room::list))
         .route("/", post(room::create))
