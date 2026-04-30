@@ -27,17 +27,17 @@ async fn main() {
     info!("Starting tasks...");
     let app_server = assemble_app(app_state.clone(), shutdown_rx);
     info!(" >Server running...");
-    let repl_loop = init_repl(State(app_state.clone()), shutdown_tx);
+    let repl_loop = init_repl(app_state.clone(), shutdown_tx);
     info!(" >REPL running...");
 
     info!("Joining tasks...");
 
-    join!(app_server, repl_loop);
+    // join!(app_server, repl_loop);
 
-    // tokio::select! {
-    //     res = app_server => info!("App server task finished: {:?}", res),
-    //     res = repl_loop => info!("CLI loop task finished: {:?}", res),
-    // };
+    tokio::select! {
+        res = app_server => info!("App server task finished: {:?}", res),
+        res = repl_loop => info!("CLI loop task finished: {:?}", res),
+    };
 
     info!("Main exiting...");
 }

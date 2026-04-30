@@ -1,4 +1,4 @@
-use crate::{db::tables, state::AppState, types::AppError};
+use crate::{error::AppError, state::AppState, types::Evidence};
 use axum::{
     extract::{
         Path, Query, State,
@@ -52,8 +52,8 @@ pub async fn handler(
 #[serde(tag = "type", content = "payload")]
 enum ClientRequest {
     PlaceClue {
-        item1: String,
-        item2: String,
+        item1: Evidence,
+        item2: Evidence,
         is_true: bool,
     },
     Chat(String),
@@ -83,7 +83,7 @@ async fn handle_socket(
 
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            if sink.send(Message::Text(msg)).await.is_err() {
+            if sink.send(Message::Text(msg.into())).await.is_err() {
                 break;
             }
         }
