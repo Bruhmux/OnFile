@@ -1,4 +1,4 @@
-use crate::{db::tables::Room, state::AppState, types::AppError};
+use crate::{db::tables::Room, error::AppError, state::AppState};
 use axum::{
     Json,
     extract::{Path, State},
@@ -105,10 +105,10 @@ pub struct JoinRoomRequest {
 
 pub async fn delete_room(
     State(state): State<AppState>,
-    Path(room_code): Path<String>,
+    Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     query("DELETE from rooms WHERE id = $1")
-        .bind(room_code)
+        .bind(id)
         .execute(&state.db)
         .await?;
 

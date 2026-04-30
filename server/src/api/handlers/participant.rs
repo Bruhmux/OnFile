@@ -1,4 +1,4 @@
-use crate::{state::AppState, types::AppError};
+use crate::{error::AppError, state::AppState};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,

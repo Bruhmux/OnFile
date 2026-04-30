@@ -1,7 +1,7 @@
 use crate::{
     db::tables::{Category, Clue},
+    error::AppError,
     state::AppState,
-    types::AppError,
 };
 use axum::{
     Json,

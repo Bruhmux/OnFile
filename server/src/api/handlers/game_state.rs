@@ -1,8 +1,4 @@
-use crate::{
-    db::tables::Clue,
-    state::AppState,
-    types::{AppError, LogicGrid},
-};
+use crate::{db::tables::Clue, error::AppError, state::AppState, types::LogicGrid};
 use axum::{
     Json,
     extract::{Path, State},
