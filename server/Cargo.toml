@@ -3,6 +3,9 @@ name = "crypts_and_clues"
 version = "0.1.0"
 edition = "2024"
 
+[dev-dependencies]
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+
 [dependencies]
 async-scoped = { version = "0.9.0", features = ["use-tokio"] }
 axum = { version = "0.8.8", features = ["json", "macros", "ws"] }
