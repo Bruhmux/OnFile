@@ -27,13 +27,6 @@ pub struct RoomParticipant {
     pub joined_at: DateTime<Utc>,
     pub is_host: bool,
 }
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
-#[sqlx(type_name = "game_status", rename_all = "snake_case")]
-pub enum GameStatus {
-    Open,
-    InProgress,
-    Finished,
-}
 
 #[derive(FromRow, Debug, Serialize, Deserialize)]
 pub struct GameState {
@@ -42,14 +35,6 @@ pub struct GameState {
     pub current_turn_user: Option<Uuid>,
     pub started_at: Option<DateTime<Utc>>,
     pub ended_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "category", rename_all = "lowercase")]
-pub enum Category {
-    Suspect,
-    Weapon,
-    Location,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -69,4 +54,20 @@ pub struct Discovery {
     pub player_id: Uuid,
     pub room_id: String,
     pub clue_id: Uuid,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
+#[sqlx(type_name = "game_status", rename_all = "snake_case")]
+pub enum GameStatus {
+    Open,
+    InProgress,
+    Finished,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "category", rename_all = "lowercase")]
+pub enum Category {
+    Suspect,
+    Weapon,
+    Location,
 }
