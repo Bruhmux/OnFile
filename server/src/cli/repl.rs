@@ -1,6 +1,5 @@
 use crate::{
     api::handlers::{
-        participant::add_participant,
         room::{CreateRoomRequest, delete_room},
         user::{CreateUserRequest, create_user},
     },
@@ -118,31 +117,6 @@ pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandl
                                 // TODO: delete room by name, list duplicate names by player host
                                 Ok(_) => println!("Deleted room {room_id}"),
                                 Err(e) => eprintln!("Error deleting room: {:?}", e),
-                            }
-                        }
-
-                        // ── Participants ─────────────────────────────────────
-                        ["add", "participant", room_uuid, user_uuid] => {
-                            let Ok(room_id_result) = room_uuid.parse() else {
-                                eprintln!("Unable to parse UUID from provided room_id");
-                                continue;
-                            };
-                            let Ok(user_id_result) = user_uuid.parse() else {
-                                eprintln!("Unable to parse UUID from provided room_id");
-                                continue;
-                            };
-                            match add_participant(
-                                State(state.clone()),
-                                Path(room_id_result),
-                                Query(user_id_result),
-                            )
-                            .await
-                            {
-                                Ok(p) => println!(
-                                    "Added participant: {:?}",
-                                    p.into_response().into_body()
-                                ),
-                                Err(e) => eprintln!("Error adding participant: {:?}", e),
                             }
                         }
 
