@@ -5,7 +5,7 @@ use crypts_and_clues::{
     tasks::server::assemble_app,
 };
 use std::sync::Arc;
-use tokio::{join, sync::watch};
+use tokio::sync::watch;
 use tracing::info;
 
 #[tokio::main]
@@ -21,6 +21,7 @@ async fn main() {
 
         config: app_config,
         channels: Arc::new(dashmap::DashMap::new()),
+        decks: Arc::new(dashmap::DashMap::new()),
     };
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
@@ -32,12 +33,7 @@ async fn main() {
 
     info!("Joining tasks...");
 
-    // join!(app_server, repl_loop);
-
-    tokio::select! {
-        res = app_server => info!("App server task finished: {:?}", res),
-        res = repl_loop => info!("CLI loop task finished: {:?}", res),
-    };
+    let _ = tokio::join!(biased; app_server, repl_loop);
 
     info!("Main exiting...");
 }

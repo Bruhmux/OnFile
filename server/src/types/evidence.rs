@@ -1,66 +1,8 @@
-use crate::db::tables::{Category, Clue};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Serialize)]
-pub struct LogicGrid {
-    pub suspect_weapon: [[Option<bool>; 8]; 8],
-    pub suspect_location: [[Option<bool>; 8]; 8],
-    pub weapon_location: [[Option<bool>; 8]; 8],
-}
-
-impl LogicGrid {
-    pub fn new() -> Self {
-        Self {
-            suspect_weapon: [[None; 8]; 8],
-            suspect_location: [[None; 8]; 8],
-            weapon_location: [[None; 8]; 8],
-        }
-    }
-
-    pub fn from_clues(clues: Vec<Clue>) -> Self {
-        let mut grid = Self::new();
-        for clue in clues {
-            grid.apply_clue(&clue);
-        }
-        grid
-    }
-
-    fn apply_clue(&mut self, clue: &Clue) {
-        let i = clue.x_idx as usize;
-        let j = clue.y_idx as usize;
-        let val = Some(clue.is_true);
-
-        match (&clue.x_category, &clue.y_category) {
-            (Category::Suspect, Category::Weapon) => self.suspect_weapon[i][j] = val,
-            (Category::Weapon, Category::Suspect) => self.suspect_weapon[j][i] = val,
-
-            (Category::Suspect, Category::Location) => self.suspect_location[i][j] = val,
-            (Category::Location, Category::Suspect) => self.suspect_location[j][i] = val,
-
-            (Category::Weapon, Category::Location) => self.weapon_location[i][j] = val,
-            (Category::Location, Category::Weapon) => self.weapon_location[j][i] = val,
-            _ => {}
-        }
-    }
-}
-
-impl Default for LogicGrid {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Serialize)]
-struct File {
-    suspect: Suspect,
-    weapon: Weapon,
-    location: Location,
-    verdict: Verdict,
-}
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-enum Suspect {
+pub enum Suspect {
     TavernkeepGarrick,
     KnightRowan,
     WizardBjorn,
@@ -72,7 +14,7 @@ enum Suspect {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-enum Weapon {
+pub enum Weapon {
     WoodenStake,
     BloodyDagger,
     PoisonVial,
@@ -84,7 +26,7 @@ enum Weapon {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-enum Location {
+pub enum Location {
     GuildHall,
     AlchemyLab,
     ThroneRoom,
@@ -96,7 +38,7 @@ enum Location {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-enum Verdict {
+pub enum Verdict {
     Guilty,
     Innocent,
 }
@@ -173,6 +115,15 @@ impl TryFrom<u8> for Location {
             6 => Ok(Self::RoyalStables),
             7 => Ok(Self::MustyCellar),
             _ => Err(()),
+        }
+    }
+}
+
+impl From<bool> for Verdict {
+    fn from(v: bool) -> Self {
+        match v {
+            true => Self::Guilty,
+            false => Self::Innocent,
         }
     }
 }
