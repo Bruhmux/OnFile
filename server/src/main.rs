@@ -1,11 +1,9 @@
-#![allow(dead_code, unused_variables)]
-use axum::extract::State;
 use crypts_and_clues::{
     cli::repl::init_repl, config::init_config, db::init_connection, state::AppState,
     tasks::server::assemble_app,
 };
-use std::sync::Arc;
-use tokio::sync::watch;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::{Mutex, watch};
 use tracing::info;
 
 #[tokio::main]
@@ -20,8 +18,8 @@ async fn main() {
             .expect("Error initializing database connection"),
 
         config: app_config,
-        channels: Arc::new(dashmap::DashMap::new()),
-        decks: Arc::new(dashmap::DashMap::new()),
+        channels: Arc::new(Mutex::new(HashMap::new())),
+        decks: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);

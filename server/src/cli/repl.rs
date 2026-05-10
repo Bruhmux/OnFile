@@ -1,14 +1,5 @@
-use crate::{
-    api::handlers::{
-        room::{CreateRoomRequest, delete_room},
-        user::{CreateUserRequest, create_user},
-    },
-    state::AppState,
-};
-use axum::{
-    extract::{Path, Query, State},
-    response::IntoResponse,
-};
+use crate::{api::handlers::room::delete_room, state::AppState};
+use axum::extract::{Path, State};
 use rustyline::{DefaultEditor, error::ReadlineError};
 use tokio::{sync::watch, task::JoinHandle};
 
@@ -25,41 +16,11 @@ pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandl
 
                     match parts.as_slice() {
                         // ── Users ────────────────────────────────────────────
-                        ["create", "user", display_name] => {
-                            match create_user(
-                                State(state.clone()),
-                                axum::Json(CreateUserRequest {
-                                    display_name: display_name.to_string(),
-                                }),
-                            )
-                            .await
-                            {
-                                Ok(user) => println!("Created user: {:?}", user.into_response()),
-                                Err(e) => eprintln!("Error creating user: {:?}", e),
-                            }
-                        }
-
-                        ["get", "user", uuid] => {
+                        ["get", "users", room_id] => {
                             // TODO:
                             // match get_user(State(state.clone()), Path(uuid.to_string())).await {
                             //     Ok(user) => println!("User: {:?}", user),
                             //     Err(e) => eprintln!("Error fetching user: {:?}", e),
-                            // }
-                        }
-
-                        ["update", "user", uuid, display_name] => {
-                            // TODO:
-                            // match update_user(
-                            //     State(state.clone()),
-                            //     Path(uuid.to_string()),
-                            //     axum::Json(CreateUserRequest {
-                            //         display_name: display_name.to_string(),
-                            //     }),
-                            // )
-                            // .await
-                            // {
-                            //     Ok(user) => println!("Updated user: {:?}", user),
-                            //     Err(e) => eprintln!("Error updating user: {:?}", e),
                             // }
                         }
 
@@ -114,47 +75,9 @@ pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandl
                         ["delete", "room", room_id] => {
                             match delete_room(State(state.clone()), Path(room_id.to_string())).await
                             {
-                                // TODO: delete room by name, list duplicate names by player host
                                 Ok(_) => println!("Deleted room {room_id}"),
                                 Err(e) => eprintln!("Error deleting room: {:?}", e),
                             }
-                        }
-
-                        ["get", "participants", room_id] => {
-                            // TODO:
-                            // match get_participants(State(state.clone()), Path(room_id.to_string()))
-                            //     .await
-                            // {
-                            //     Ok(list) => println!("Participants: {:?}", list),
-                            //     Err(e) => eprintln!("Error fetching participants: {:?}", e),
-                            // }
-                        }
-
-                        ["remove", "participant", room_id, user_uuid] => {
-                            // TODO:
-                            // match remove_participant(
-                            //     State(state.clone()),
-                            //     Path((room_id.to_string(), user_uuid.to_string())),
-                            // )
-                            // .await
-                            // {
-                            //     Ok(_) => println!("Removed participant {user_uuid} from {room_id}"),
-                            //     Err(e) => eprintln!("Error removing participant: {:?}", e),
-                            // }
-                        }
-
-                        // ── Game State ───────────────────────────────────────
-                        ["create", "gamestate", room_uuid] => {
-                            // TODO:
-                            // match create_game_state(
-                            //     State(state.clone()),
-                            //     Path(room_uuid.to_string()),
-                            // )
-                            // .await
-                            // {
-                            //     Ok(gs) => println!("Created game state: {:?}", gs),
-                            //     Err(e) => eprintln!("Error creating game state: {:?}", e),
-                            // }
                         }
 
                         ["get", "gamestate", room_uuid] => {
@@ -167,21 +90,8 @@ pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandl
                             // }
                         }
 
-                        ["delete", "gamestate", room_uuid] => {
-                            // TODO:
-                            // match delete_game_state(
-                            //     State(state.clone()),
-                            //     Path(room_uuid.to_string()),
-                            // )
-                            // .await
-                            // {
-                            //     Ok(_) => println!("Deleted game state for room {room_uuid}"),
-                            //     Err(e) => eprintln!("Error deleting game state: {:?}", e),
-                            // }
-                        }
-
                         // ── Clues ────────────────────────────────────────────
-                        ["create", "clue", room_uuid, text] => {
+                        ["create", "clue", room_id, text] => {
                             // TODO:
                             // match create_clue(
                             //     State(state.clone()),
@@ -197,7 +107,7 @@ pub fn init_repl(state: AppState, shutdown_tx: watch::Sender<bool>) -> JoinHandl
                             // }
                         }
 
-                        ["get", "clues", room_uuid] => {
+                        ["get", "clues", room_id] => {
                             // TODO:
                             // match get_clues(State(state.clone()), Path(room_uuid.to_string())).await
                             // {

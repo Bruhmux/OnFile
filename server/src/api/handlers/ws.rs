@@ -1,5 +1,5 @@
 use crate::{
-    db::tables::Category,
+    db::tables::{Category, Clue},
     error::AppError,
     state::AppState,
     types::{
@@ -17,7 +17,9 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
+use sqlx::query_as;
+use std::time::Duration;
+use tokio::{sync::broadcast, time::sleep};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -58,7 +60,7 @@ pub async fn handler(
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "payload")]
-enum ClientRequest {
+pub enum ClientRequest {
     Chat(String),
     Guess {
         suspect: Suspect,
@@ -74,40 +76,17 @@ enum ClientRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "payload")]
-enum ServerResponse {
+pub enum ServerResponse {
     Error(String),
-    Chat {
-        sender: String,
-        message: String,
-    },
-    Joined {
-        display_name: String,
-    },
-    Left {
-        display_name: String,
-    },
-    TurnStarted {
-        display_name: String,
-    },
-    VerdictResult {
-        correct: bool,
-        message: String,
-    },
-    Removed {
-        reason: String,
-    },
-    DrawDiscovery {
-        clue: Discovery,
-    },
-    CluePlaced {
-        display_name: String,
-        clue_id: Uuid,
-        is_true: bool,
-    },
-    PlayerStatus {
-        display_name: String,
-        active: bool,
-    },
+    Chat { sender: String, message: String },
+    Joined { display_name: String },
+    Leave { display_name: String },
+    TurnStarted { display_name: String },
+    VerdictResult { correct: bool, message: String },
+    Removed { reason: String },
+    DrawDiscovery { files: u8 },
+    CluePlaced { display_name: String, clue: Clue },
+    PlayerStatus { display_name: String, active: bool },
 }
 
 #[derive(Debug, Serialize)]
@@ -117,7 +96,7 @@ struct ClueInfo {
     category_2: Category,
 }
 
-struct PlayerSession {
+struct PlayerState {
     can_guess: bool,
     active: bool,
 }
@@ -129,8 +108,10 @@ async fn handle_socket(
     user_id: Uuid,
     display_name: String,
 ) {
-    let tx = state
+    let mut tx = state
         .channels
+        .lock()
+        .await
         .entry(room_id.clone())
         .or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
@@ -139,11 +120,11 @@ async fn handle_socket(
         .clone();
     let mut rx = tx.subscribe();
 
-    let mut session = PlayerSession {
+    let mut session = PlayerState {
         can_guess: true,
         active: true,
     };
-    let join_msg = serde_json::to_string(&ServerResponse::Joined {
+    let join_msg = serde_json::to_string_pretty(&ServerResponse::Joined {
         display_name: display_name.clone(),
     })
     .unwrap();
@@ -172,7 +153,8 @@ async fn handle_socket(
                                     sender: name_clone.clone(),
                                     message: msg,
                                 };
-                                let _ = tx_clone.send(serde_json::to_string(&response).unwrap());
+                                let _ =
+                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
                             ClientRequest::Guess {
                                 suspect,
@@ -191,8 +173,8 @@ async fn handle_socket(
                                     Ok(rec) => {
                                         if rec.current_turn_user != Some(user_id) {
                                             let err = ServerResponse::Error("Not your turn".into());
-                                            let _ =
-                                                tx_clone.send(serde_json::to_string(&err).unwrap());
+                                            let _ = tx_clone
+                                                .send(serde_json::to_string_pretty(&err).unwrap());
                                             continue;
                                         }
                                     }
@@ -200,7 +182,8 @@ async fn handle_socket(
                                         let err = ServerResponse::Error(
                                             "Game not started or turn not set".into(),
                                         );
-                                        let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                                        let _ = tx_clone
+                                            .send(serde_json::to_string_pretty(&err).unwrap());
                                         continue;
                                     }
                                 }
@@ -208,14 +191,16 @@ async fn handle_socket(
                                     let err = ServerResponse::Error(
                                         "You have been removed from play".into(),
                                     );
-                                    let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                                    let _ =
+                                        tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                                     continue;
                                 }
                                 if !session.can_guess {
                                     let err = ServerResponse::Error(
                                         "You already used your verdict guess".into(),
                                     );
-                                    let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                                    let _ =
+                                        tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                                     continue;
                                 }
 
@@ -225,15 +210,15 @@ async fn handle_socket(
                                 )
                                 .fetch_one(&state.db)
                                 .await;
+
                                 let mut correct = false;
-                                if let Ok(rec) = solution_check {
-                                    if let Ok(solution) =
+                                if let Ok(rec) = solution_check
+                                    && let Ok(solution) =
                                         serde_json::from_value::<File>(rec.solution_data)
-                                    {
-                                        correct = solution.suspect() == suspect
-                                            && solution.location() == location
-                                            && solution.weapon() == weapon
-                                    }
+                                {
+                                    correct = solution.suspect() == suspect
+                                        && solution.location() == location
+                                        && solution.weapon() == weapon
                                 }
 
                                 session.can_guess = true;
@@ -243,53 +228,83 @@ async fn handle_socket(
                                         correct: false,
                                         message: "Wrong verdict! You are removed from play.".into(),
                                     };
-                                    let _ =
-                                        tx_clone.send(serde_json::to_string(&response).unwrap());
+                                    let _ = tx_clone
+                                        .send(serde_json::to_string_pretty(&response).unwrap());
 
                                     let removed = ServerResponse::Removed {
                                         reason: "Wrong verdict guess".into(),
                                     };
-                                    let _ = tx_clone.send(serde_json::to_string(&removed).unwrap());
+                                    let _ = tx_clone
+                                        .send(serde_json::to_string_pretty(&removed).unwrap());
                                 } else {
                                     let response = ServerResponse::VerdictResult {
                                         correct: true,
                                         message: "You found the assassin! You win!".into(),
                                     };
-                                    let _ =
-                                        tx_clone.send(serde_json::to_string(&response).unwrap());
+                                    let _ = tx_clone
+                                        .send(serde_json::to_string_pretty(&response).unwrap());
                                 }
                             }
                             ClientRequest::DrawDiscovery => {
                                 if !session.active {
                                     let err =
                                         ServerResponse::Error("Player removed from play".into());
-                                    let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                                    let _ =
+                                        tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                                     continue;
                                 }
-                                let clue = state.decks.get(&room_id).unwrap().lock().await.draw();
 
-                                let response = ServerResponse::DrawDiscovery { clue };
-                                let _ = tx_clone.send(serde_json::to_string(&response).unwrap());
+                                let response;
+                                tokio::select! {
+                                    mut deck = state.decks.lock() => {
+                                        match deck.get_mut(&room_id).unwrap().draw() {
+                                            Discovery::Wild => {
+                                                response = ServerResponse::DrawDiscovery { files: 1 }
+                                            }
+                                            Discovery::Same(_) => {
+                                                response = ServerResponse::DrawDiscovery { files: 2 }
+                                            }
+                                            Discovery::Different(_, _) => {
+                                                response = ServerResponse::DrawDiscovery { files: 2 }
+                                            }
+                                        }
+                                    }
+                                    _ = sleep(Duration::from_secs(5)) => {
+                                        response = ServerResponse::Error("Could not get lock on deck".to_string())
+                                    }
+                                };
+
+                                let _ =
+                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
                             ClientRequest::PlaceClue { clue_id, is_true } => {
                                 if !session.active {
                                     let err = ServerResponse::Error("It is not your turn".into());
-                                    let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                                    let _ =
+                                        tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                                     continue;
                                 }
-                                // TODO: Save clue to DB, broadcast to all
+                                let clue = query_as::<_, Clue>(r#"
+                                    INSERT INTO clues (id, room_id, x_category, x_idx, y_category, y_idx, is_true)
+                                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                    "#)
+                                    .bind(clue_id)
+                                    .fetch_one(&state.db)
+                                    .await
+                                    .unwrap();
+
                                 let response = ServerResponse::CluePlaced {
                                     display_name: name_clone.clone(),
-                                    clue_id,
-                                    is_true,
+                                    clue,
                                 };
-                                let _ = tx_clone.send(serde_json::to_string(&response).unwrap());
+                                let _ =
+                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
                         }
                     }
                     Err(e) => {
                         let err = ServerResponse::Error(format!("Invalid message format: {}", e));
-                        let _ = tx_clone.send(serde_json::to_string(&err).unwrap());
+                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                     }
                 }
             }
@@ -301,7 +316,7 @@ async fn handle_socket(
         _ = (&mut recv_task) => send_task.abort(),
     };
 
-    let leave_msg = serde_json::to_string(&ServerResponse::Left {
+    let leave_msg = serde_json::to_string_pretty(&ServerResponse::Leave {
         display_name: display_name.clone(),
     })
     .unwrap();

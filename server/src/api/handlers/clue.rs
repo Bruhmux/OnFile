@@ -15,7 +15,7 @@ pub async fn list(
     State(state): State<AppState>,
     Path(room_id): Path<String>,
 ) -> Result<Response, AppError> {
-    let clues = sqlx::query_as::<_, Clue>("SELECT * FROM clues WHERE room_id = $1")
+    let clues: Vec<Clue> = sqlx::query_as::<_, Clue>("SELECT * FROM clues WHERE room_id = $1")
         .bind(&room_id)
         .fetch_all(&state.db)
         .await?;

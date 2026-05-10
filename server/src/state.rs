@@ -7,8 +7,8 @@ use tokio::sync::{Mutex, broadcast};
 pub struct AppState {
     pub db: PgPool,
     pub config: Arc<Config>,
-    pub channels: Arc<HashMap<String, broadcast::Sender<String>>>,
-    pub decks: Arc<HashMap<String, Mutex<Deck>>>,
+    pub channels: Arc<Mutex<HashMap<String, broadcast::Sender<String>>>>,
+    pub decks: Arc<Mutex<HashMap<String, Deck>>>,
 }
 
 // Example state
