@@ -12,31 +12,7 @@ pub enum Discovery {
     Different(Category, Category),
 }
 
-pub fn init_deck() -> Vec<Discovery> {
-    let mut wild_cards = vec![Discovery::Wild; 2];
-    let mut suspect_cards = vec![Discovery::Same(Category::Suspect); 2];
-    let mut location_cards = vec![Discovery::Same(Category::Location); 2];
-    let mut weapon_cards = vec![Discovery::Same(Category::Weapon); 2];
-    let mut suspect_location_cards =
-        vec![Discovery::Different(Category::Suspect, Category::Location); 2];
-    let mut suspect_weapon_cards =
-        vec![Discovery::Different(Category::Suspect, Category::Weapon); 2];
-    let mut location_weapon_cards =
-        vec![Discovery::Different(Category::Location, Category::Weapon); 2];
-
-    let mut deck = vec![];
-    deck.append(&mut wild_cards);
-    deck.append(&mut suspect_cards);
-    deck.append(&mut location_cards);
-    deck.append(&mut weapon_cards);
-    deck.append(&mut suspect_location_cards);
-    deck.append(&mut suspect_weapon_cards);
-    deck.append(&mut location_weapon_cards);
-    deck.shuffle(&mut rand::rng());
-    deck
-}
-
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct File {
     suspect: Suspect,
     weapon: Weapon,
@@ -82,4 +58,28 @@ pub fn init_files(amount: u8) -> Vec<File> {
             verdict: Verdict::from(i as u8 == guilty_index),
         })
         .collect()
+}
+
+pub fn init_deck() -> Vec<Discovery> {
+    let mut wild_cards = vec![Discovery::Wild; 6];
+    let mut suspect_cards = vec![Discovery::Same(Category::Suspect); 2];
+    let mut location_cards = vec![Discovery::Same(Category::Location); 2];
+    let mut weapon_cards = vec![Discovery::Same(Category::Weapon); 2];
+    let mut suspect_location_cards =
+        vec![Discovery::Different(Category::Suspect, Category::Location); 2];
+    let mut suspect_weapon_cards =
+        vec![Discovery::Different(Category::Suspect, Category::Weapon); 2];
+    let mut location_weapon_cards =
+        vec![Discovery::Different(Category::Location, Category::Weapon); 2];
+
+    let mut deck = vec![];
+    deck.append(&mut wild_cards);
+    deck.append(&mut suspect_cards);
+    deck.append(&mut location_cards);
+    deck.append(&mut weapon_cards);
+    deck.append(&mut suspect_location_cards);
+    deck.append(&mut suspect_weapon_cards);
+    deck.append(&mut location_weapon_cards);
+    deck.shuffle(&mut rand::rng());
+    deck
 }

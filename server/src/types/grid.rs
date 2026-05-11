@@ -48,7 +48,7 @@ impl LogicGrid {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Deck {
     cards: Vec<Discovery>,
 }
