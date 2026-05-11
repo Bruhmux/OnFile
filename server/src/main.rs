@@ -1,37 +1,37 @@
-#![allow(dead_code, unused)]
-use crate::{
-    db::{init::init_connection, types::AppState},
-    tasks::{
-        cli::cli_loop,
-        server::{create_app, init_db},
-    },
+use crypts_and_clues::{
+    cli::repl::init_repl, config::init_config, db::init_connection, state::AppState,
+    tasks::server::assemble_app,
 };
-use axum::extract::State;
-use sqlx::PgPool;
-use std::sync::Arc;
-use tokio::{join, sync::broadcast};
-
-mod db;
-mod handlers;
-mod routes;
-mod tasks;
-mod types;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::{Mutex, watch};
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let (shutdown, _) = broadcast::channel::<String>(16);
+    let app_config = init_config().await;
 
-    let pool: PgPool = init_connection()
-        .await
-        .expect("Failed to connect to database");
-    let app_state = Arc::new(AppState { db: pool });
+    let app_state = AppState {
+        db: init_connection(app_config.clone())
+            .await
+            .expect("Error initializing database connection"),
 
-    init_db(app_state.clone());
-    //     Server Start
-    let app_server = create_app(app_state.clone());
-    let cli_task = cli_loop(State(app_state.clone()));
+        config: app_config,
+        channels: Arc::new(Mutex::new(HashMap::new())),
+        decks: Arc::new(Mutex::new(HashMap::new())),
+    };
 
-    join!(app_server, cli_task);
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    info!("Starting tasks...");
+    let app_server = assemble_app(app_state.clone(), shutdown_rx);
+    info!(" >Server running...");
+    let repl_loop = init_repl(app_state.clone(), shutdown_tx);
+    info!(" >REPL running...");
+
+    info!("Joining tasks...");
+
+    let _ = tokio::join!(biased; app_server, repl_loop);
+
+    info!("Main exiting...");
 }

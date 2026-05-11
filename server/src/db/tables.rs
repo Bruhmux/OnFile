@@ -1,9 +1,34 @@
-use crate::types::LogicGrid;
-use axum::Json;
 use chrono::{DateTime, Utc};
-use sqlx::types::Uuid;
+use serde::{Deserialize, Serialize};
+use sqlx::{prelude::FromRow, types::Uuid};
 
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
+#[sqlx(type_name = "discovery_card_type", rename_all = "lowercase")]
+pub enum DiscoveryCardType {
+    Wild,
+    Same,
+    Different,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
+#[sqlx(type_name = "game_status", rename_all = "snake_case")]
+pub enum GameStatus {
+    Open,
+    InProgress,
+    Finished,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "category", rename_all = "lowercase")]
+pub enum Category {
+    Suspect,
+    Weapon,
+    Location,
+    Verdict,
+}
+
+#[derive(FromRow, Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
     pub display_name: String,
@@ -12,35 +37,52 @@ pub struct User {
     pub last_heartbeat: DateTime<Utc>,
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(FromRow, Debug, Serialize, Deserialize)]
 pub struct Room {
-    id: Uuid,
-    join_code: [u8; 5],
-    name: String,
-    grid: Json<LogicGrid>,
+    pub id: String,
+    pub display_name: String,
+    pub created_at: DateTime<Utc>,
+    pub is_active: bool,
+    pub file_data: Option<serde_json::Value>,
 }
 
-#[derive(sqlx::FromRow)]
-struct Participants {
-    room_id: Uuid,
-    user_id: Uuid,
-    joined_at: DateTime<Utc>,
-    is_host: bool,
+#[derive(FromRow, Debug, Serialize, Deserialize)]
+pub struct RoomParticipant {
+    pub id: Uuid,
+    pub room_id: String,
+    pub user_id: Uuid,
+    pub joined_at: DateTime<Utc>,
+    pub is_host: bool,
 }
 
-#[derive(sqlx::FromRow)]
-pub struct game_state {
-    room_id: Uuid,
+#[derive(FromRow, Debug, Serialize, Deserialize)]
+pub struct GameState {
+    pub room_id: String,
+    pub status: GameStatus,
+    pub current_turn_user: Option<Uuid>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub ended_at: Option<DateTime<Utc>>,
+    pub solution_file: i32,
+    pub files_data: Option<serde_json::Value>,
 }
 
-#[derive(sqlx::FromRow)]
-pub struct clues {}
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Clue {
+    pub id: Uuid,
+    pub room_id: String,
+    pub x_category: Category,
+    pub x_idx: i32,
+    pub y_category: Category,
+    pub y_idx: i32,
+    pub is_true: bool,
+}
 
-#[derive(sqlx::FromRow)]
-pub struct logic_grid {}
-
-#[derive(sqlx::FromRow)]
-pub struct grid_cell {}
-
-#[derive(sqlx::FromRow)]
-pub struct actions {}
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Discovery {
+    pub id: Uuid,
+    pub player_id: Uuid,
+    pub room_id: String,
+    pub card_type: DiscoveryCardType,
+    pub category_1: Option<Category>,
+    pub category_2: Option<Category>,
+}
