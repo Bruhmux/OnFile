@@ -41,7 +41,7 @@ CREATE TABLE game_states (
     current_turn_user UUID,
     started_at TIMESTAMPTZ,
     ended_at TIMESTAMPTZ,
-    solution_data JSONB NOT NULL,
+    solution_file INT NOT NULL,
     version INT NOT NULL DEFAULT 0,
     FOREIGN KEY (room_id, current_turn_user)
         REFERENCES room_participants(room_id, user_id)

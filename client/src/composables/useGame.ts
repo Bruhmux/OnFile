@@ -214,19 +214,22 @@ export function useGame() {
     discoveryStep.value = 'pick-file';
   }
 
-  function discoveryPickFile(fileIdx: number): void {
-    if (!pendingDiscovery.value || !activeCategory.value) return;
-    sendChooseFile(pendingDiscovery.value.discovery_id, fileIdx, activeCategory.value);
+  function discoveryPickFile(fileIdx: number, category?: Category): void {
+    const cat = category ?? activeCategory.value;
+    if (!pendingDiscovery.value || !cat) return;
+    sendChooseFile(pendingDiscovery.value.discovery_id, fileIdx, cat);
     disabledFiles.value.push(fileIdx);
 
     if (discoveryStep.value === 'pick-file-again') {
       clearPendingDiscovery();
-    } else {
-      if (cardCategories.value.length === 2) {
-        const other = cardCategories.value.find(c => c !== activeCategory.value) ?? null;
-        activeCategory.value = other;
-      }
+    } else if (cardCategories.value.length === 2) {
+      const other = cardCategories.value.find(c => c !== cat) ?? null;
+      activeCategory.value = other;
       discoveryStep.value = 'pick-file-again';
+    } else if (cardCategories.value.length === 1) {
+      discoveryStep.value = 'pick-file-again';
+    } else {
+      clearPendingDiscovery();
     }
   }
 

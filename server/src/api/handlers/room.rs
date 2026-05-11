@@ -1,4 +1,4 @@
-use crate::{db::tables::Room, error::AppError, state::AppState};
+use crate::{db::tables::Room, error::AppError, state::AppState, types::evidence::Verdict};
 use axum::{
     Json,
     extract::{Path, State},
@@ -201,11 +201,24 @@ pub async fn init_files(
     let file_data = serde_json::to_value(&files)
         .map_err(|e| AppError::Http(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    let guilty_idx = files
+        .iter()
+        .position(|f| f.verdict() == Verdict::Guilty)
+        .unwrap_or(0) as i32;
+
     sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
         .bind(&file_data)
         .bind(&room_id)
         .execute(&state.db)
         .await?;
+
+    sqlx::query(
+        "INSERT INTO game_states (room_id, status, solution_file) VALUES ($1, 'open', $2) ON CONFLICT (room_id) DO UPDATE SET solution_file = $2",
+    )
+    .bind(&room_id)
+    .bind(guilty_idx)
+    .execute(&state.db)
+    .await?;
 
     Ok((StatusCode::OK, Json(file_data)))
 }

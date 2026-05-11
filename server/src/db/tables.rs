@@ -18,13 +18,14 @@ pub enum GameStatus {
     Finished,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "category", rename_all = "lowercase")]
 pub enum Category {
     Suspect,
     Weapon,
     Location,
+    Verdict,
 }
 
 #[derive(FromRow, Debug, Serialize, Deserialize)]
@@ -61,7 +62,7 @@ pub struct GameState {
     pub current_turn_user: Option<Uuid>,
     pub started_at: Option<DateTime<Utc>>,
     pub ended_at: Option<DateTime<Utc>>,
-    pub solution_data: serde_json::Value,
+    pub solution_file: i32,
     pub files_data: Option<serde_json::Value>,
 }
 
@@ -82,6 +83,6 @@ pub struct Discovery {
     pub player_id: Uuid,
     pub room_id: String,
     pub card_type: DiscoveryCardType,
-    pub category_1: Category,
-    pub category_2: Category,
+    pub category_1: Option<Category>,
+    pub category_2: Option<Category>,
 }

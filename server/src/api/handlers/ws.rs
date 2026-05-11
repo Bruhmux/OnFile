@@ -249,20 +249,35 @@ async fn handle_socket(
                                 }
 
                                 let solution_check = sqlx::query!(
-                                    "SELECT solution_data FROM game_states WHERE room_id = $1",
+                                    "SELECT solution_file FROM game_states WHERE room_id = $1",
                                     room_id
                                 )
                                 .fetch_one(&state.db)
                                 .await;
 
                                 let mut correct = false;
-                                if let Ok(rec) = solution_check
-                                    && let Ok(solution) =
-                                        serde_json::from_value::<File>(rec.solution_data)
-                                {
-                                    correct = solution.suspect() == suspect
-                                        && solution.location() == location
-                                        && solution.weapon() == weapon
+                                if let Ok(rec) = solution_check {
+                                    let solution_idx = rec.solution_file as usize;
+                                    let room = sqlx::query_as::<_, Room>(
+                                        "SELECT * FROM rooms WHERE id = $1",
+                                    )
+                                    .bind(&room_id)
+                                    .fetch_one(&state.db)
+                                    .await;
+
+                                    if let Ok(room) = room {
+                                        if let Some(data) = room.file_data {
+                                            if let Ok(files) =
+                                                serde_json::from_value::<Vec<File>>(data)
+                                            {
+                                                if let Some(solution) = files.get(solution_idx) {
+                                                    correct = solution.suspect() == suspect
+                                                        && solution.location() == location
+                                                        && solution.weapon() == weapon;
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
                                 session.can_guess = true;
@@ -328,7 +343,7 @@ async fn handle_socket(
                                             }
                                         }
 
-                                        let result = sqlx::query!(
+                                        let _ = sqlx::query!(
                                             r#"
                                             INSERT INTO discoveries (id, player_id, room_id, card_type, category_1, category_2)
                                             VALUES ($1, $2, $3, $4, $5, $6)
@@ -345,7 +360,7 @@ async fn handle_socket(
 
                                         response = ServerResponse::DrawDiscovery { discovery_id, card, files }
                                     }
-                                    _ = sleep(Duration::from_secs(5)) => {
+                                    _ = sleep(Duration::from_secs(3)) => {
                                         response = ServerResponse::Error("Could not get lock on deck".to_string())
                                     }
                                 };
@@ -358,16 +373,30 @@ async fn handle_socket(
                                 let files = crate::types::discovery::init_files(amount);
                                 let file_data = serde_json::to_value(&files).unwrap_or_default();
 
-                                let _ =
-                                    sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
-                                        .bind(&file_data)
-                                        .bind(&room_id)
-                                        .execute(&state.db)
-                                        .await;
+                                let guilty_idx = files
+                                    .iter()
+                                    .position(|f| f.verdict() == crate::types::evidence::Verdict::Guilty)
+                                    .unwrap_or(0) as i32;
+
+                                let _ = sqlx::query(
+                                    "UPDATE rooms SET file_data = $1 WHERE id = $2",
+                                )
+                                .bind(&file_data)
+                                .bind(&room_id)
+                                .execute(&state.db)
+                                .await;
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO game_states (room_id, status, solution_file) VALUES ($1, 'open', $2) ON CONFLICT (room_id) DO UPDATE SET solution_file = $2",
+                                )
+                                .bind(&room_id)
+                                .bind(guilty_idx)
+                                .execute(&state.db)
+                                .await;
 
                                 let response = ServerResponse::FilesInitiated { files };
-                                let _ =
-                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
+                                let _ = tx_clone
+                                    .send(serde_json::to_string_pretty(&response).unwrap());
                             }
                             ClientRequest::ChooseFile {
                                 discovery_id,
@@ -432,6 +461,17 @@ async fn handle_socket(
                                     }
                                 };
 
+                                if category == Category::Verdict
+                                    && discovery.card_type != DiscoveryCardType::Wild
+                                {
+                                    let err = ServerResponse::Error(
+                                        "Verdict can only be chosen for Wild cards".into(),
+                                    );
+                                    let _ = tx_clone
+                                        .send(serde_json::to_string_pretty(&err).unwrap());
+                                    continue;
+                                }
+
                                 let file = match files.get(file_idx as usize) {
                                     Some(f) => f,
                                     None => {
@@ -449,6 +489,7 @@ async fn handle_socket(
                                     Category::Suspect => Evidence::Suspect(file.suspect()),
                                     Category::Weapon => Evidence::Weapon(file.weapon()),
                                     Category::Location => Evidence::Location(file.location()),
+                                    Category::Verdict => Evidence::Verdict(file.verdict()),
                                 };
 
                                 let response = ServerResponse::FileRevealed { file_idx, evidence };

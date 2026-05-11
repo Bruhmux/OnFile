@@ -9,7 +9,7 @@ async fn test_game_state_crud(pool: PgPool) {
         .unwrap();
 
     let state = sqlx::query_as::<_, GameState>(
-        "INSERT INTO game_states (room_id, status) VALUES ($1, $2) RETURNING *",
+        "INSERT INTO game_states (room_id, status, solution_file) VALUES ($1, $2, 0) RETURNING *",
     )
     .bind("TS123")
     .bind(GameStatus::Open)

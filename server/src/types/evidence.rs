@@ -1,3 +1,4 @@
+use crate::db::tables::Category;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -49,6 +50,7 @@ pub enum Evidence {
     Suspect(Suspect),
     Weapon(Weapon),
     Location(Location),
+    Verdict(Verdict),
 }
 
 impl Evidence {
@@ -57,6 +59,7 @@ impl Evidence {
             Self::Suspect(s) => s as u8,
             Self::Weapon(w) => w as u8,
             Self::Location(l) => l as u8,
+            Self::Verdict(v) => v as u8,
         }
     }
     pub fn type_str(self) -> &'static str {
@@ -64,6 +67,7 @@ impl Evidence {
             Self::Suspect(_) => "suspect",
             Self::Weapon(_) => "weapon",
             Self::Location(_) => "location",
+            Self::Verdict(_) => "verdict",
         }
     }
 }

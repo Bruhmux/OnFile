@@ -53,6 +53,7 @@ const clueIsTrue = ref(true);
 const fileAmount = ref(4);
 
 const chosenFileIdx = ref(0);
+const wildCategory = ref<Category>('suspect');
 
 function handleConnect(): void {
   connectWebSocket();
@@ -88,6 +89,11 @@ function handlePlaceClue(): void {
 
 function handleInitFiles(): void {
   sendInitFiles(fileAmount.value);
+}
+
+function handleExamineFile(): void {
+  const cat = activeCategory.value ?? wildCategory.value;
+  discoveryPickFile(chosenFileIdx.value, cat);
 }
 
 function handleLeaveRoom(): void {
@@ -168,9 +174,18 @@ function getIndexLabel(category: Category, idx: number): string {
 
         <template v-else>
           <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ disabledFiles.length === 0 ? 'Pick a File' : 'Pick Another File' }}</h3>
-          <p class="text-sm text-gray-500 mb-4">
-            Category: <strong>{{ CATEGORIES.find(c => c.value === activeCategory)?.label }}</strong>
-          </p>
+
+          <template v-if="activeCategory">
+            <p class="text-sm text-gray-500 mb-4">
+              Category: <strong>{{ CATEGORIES.find(c => c.value === activeCategory)?.label }}</strong>
+            </p>
+          </template>
+          <template v-else>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+            <select v-model="wildCategory" class="w-full mb-3 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
+              <option v-for="c in CATEGORIES" :key="c.value" :value="c.value">{{ c.label }}</option>
+            </select>
+          </template>
 
           <label class="block text-xs font-medium text-gray-600 mb-1">File Index</label>
           <select v-model.number="chosenFileIdx" class="w-full mb-4 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
@@ -181,7 +196,7 @@ function getIndexLabel(category: Category, idx: number): string {
 
           <div class="flex gap-2">
             <button
-              @click="discoveryPickFile(chosenFileIdx)"
+              @click="handleExamineFile"
               :disabled="disabledFiles.includes(chosenFileIdx)"
               class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >

@@ -1,4 +1,4 @@
-export type Category = 'suspect' | 'weapon' | 'location';
+export type Category = 'suspect' | 'weapon' | 'location' | 'verdict';
 
 export type Suspect =
   | 'TavernkeepGarrick'
@@ -67,6 +67,7 @@ export const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'suspect', label: 'Suspect' },
   { value: 'weapon', label: 'Weapon' },
   { value: 'location', label: 'Location' },
+  { value: 'verdict', label: 'Verdict' },
 ];
 
 export const INDEX_OPTIONS = [0, 1, 2, 3, 4, 5, 6, 7];
