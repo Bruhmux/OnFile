@@ -5,10 +5,39 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use chrono::Utc;
 use rand::{RngExt, distr::Alphabetic};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, query_as};
+use sqlx::query_as;
 use uuid::Uuid;
+
+#[derive(Deserialize)]
+pub struct JoinRoomRequest {
+    pub display_name: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CreateRoomRequest {
+    pub display_name: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct CreateRoomResponse {
+    pub room_id: String,
+    pub user_id: Uuid,
+    pub connection_token: Uuid,
+}
+
+#[derive(Serialize, Debug)]
+pub struct JoinRoomResponse {
+    pub user_id: Uuid,
+    pub connection_token: Uuid,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InitFilesRequest {
+    pub amount: u8,
+}
 
 fn generate_room_code() -> String {
     rand::rng()
@@ -21,7 +50,7 @@ fn generate_room_code() -> String {
 
 pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let query = r#"
-        SELECT id, display_name, created_at, is_active 
+        SELECT id, display_name, created_at, is_active, file_data 
         FROM rooms 
         ORDER BY created_at DESC 
         LIMIT 30
@@ -49,7 +78,39 @@ pub async fn create(
 
         match result {
             Ok(_) => {
-                return Ok((StatusCode::CREATED, Json(CreateRoomResponse { room_id })));
+                let connection_token = Uuid::new_v4();
+                let user_row = sqlx::query!(
+                    r#"
+                    INSERT INTO users (display_name, connection_token, connected_at, last_heartbeat)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING id
+                    "#,
+                    &payload.display_name,
+                    connection_token,
+                    Utc::now(),
+                    Utc::now(),
+                )
+                .fetch_one(&state.db)
+                .await?;
+
+                let user_id = user_row.id;
+
+                sqlx::query!(
+                    "INSERT INTO room_participants (room_id, user_id) VALUES ($1, $2)",
+                    room_id,
+                    user_id,
+                )
+                .execute(&state.db)
+                .await?;
+
+                return Ok((
+                    StatusCode::CREATED,
+                    Json(CreateRoomResponse {
+                        room_id,
+                        user_id,
+                        connection_token,
+                    }),
+                ));
             }
             Err(e) => {
                 if let Some(db_err) = e.as_database_error()
@@ -86,28 +147,44 @@ pub async fn join(
         ));
     }
 
-    // 2. Add participant (idempotent)
-    sqlx::query(
-        "INSERT INTO room_participants (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+    // 2. Create user
+    let connection_token = Uuid::new_v4();
+    let user_row = sqlx::query!(
+        r#"
+        INSERT INTO users (display_name, connection_token, connected_at, last_heartbeat)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+        "#,
+        &payload.display_name,
+        connection_token,
+        Utc::now(),
+        Utc::now(),
     )
-    .bind(room_code)
-    .bind(payload.user_id)
+    .fetch_one(&state.db)
+    .await?;
+
+    let user_id = user_row.id;
+
+    // 3. Add participant
+    sqlx::query!(
+        "INSERT INTO room_participants (room_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        room_code,
+        user_id,
+    )
     .execute(&state.db)
     .await?;
 
-    Ok(StatusCode::OK)
-}
-
-#[derive(Deserialize)]
-pub struct JoinRoomRequest {
-    pub user_id: Uuid,
+    Ok(Json(JoinRoomResponse {
+        user_id,
+        connection_token,
+    }))
 }
 
 pub async fn delete_room(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    query("DELETE from rooms WHERE id = $1")
+    sqlx::query("DELETE from rooms WHERE id = $1")
         .bind(id)
         .execute(&state.db)
         .await?;
@@ -115,12 +192,20 @@ pub async fn delete_room(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Deserialize, Debug)]
-pub struct CreateRoomRequest {
-    pub display_name: String,
-}
+pub async fn init_files(
+    State(state): State<AppState>,
+    Path(room_id): Path<String>,
+    Json(payload): Json<InitFilesRequest>,
+) -> Result<impl IntoResponse, AppError> {
+    let files = crate::types::discovery::init_files(payload.amount);
+    let file_data = serde_json::to_value(&files)
+        .map_err(|e| AppError::Http(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-#[derive(Serialize, Debug)]
-pub struct CreateRoomResponse {
-    pub room_id: String,
+    sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
+        .bind(&file_data)
+        .bind(&room_id)
+        .execute(&state.db)
+        .await?;
+
+    Ok((StatusCode::OK, Json(file_data)))
 }
