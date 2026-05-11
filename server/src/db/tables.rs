@@ -17,6 +17,7 @@ pub struct Room {
     pub display_name: String,
     pub created_at: DateTime<Utc>,
     pub is_active: bool,
+    pub file_data: Option<serde_json::Value>,
 }
 
 #[derive(FromRow, Debug, Serialize, Deserialize)]
@@ -35,6 +36,8 @@ pub struct GameState {
     pub current_turn_user: Option<Uuid>,
     pub started_at: Option<DateTime<Utc>>,
     pub ended_at: Option<DateTime<Utc>>,
+    pub solution_data: serde_json::Value,
+    pub files_data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -53,7 +56,17 @@ pub struct Discovery {
     pub id: Uuid,
     pub player_id: Uuid,
     pub room_id: String,
-    pub clue_id: Uuid,
+    pub card_type: DiscoveryCardType,
+    pub category_1: Option<Category>,
+    pub category_2: Option<Category>,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
+#[sqlx(type_name = "discovery_card_type", rename_all = "lowercase")]
+pub enum DiscoveryCardType {
+    Wild,
+    Same,
+    Different,
 }
 
 #[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
@@ -64,7 +77,8 @@ pub enum GameStatus {
     Finished,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
 #[sqlx(type_name = "category", rename_all = "lowercase")]
 pub enum Category {
     Suspect,
