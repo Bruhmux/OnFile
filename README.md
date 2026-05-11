@@ -46,7 +46,7 @@ Players take roles of investigators in a town plagued by murder. Gather clues, f
 
 1. Navigate to `/client`.
 2. Install dependencies: `bun install`.
-3. Start dev server: `bun run dev`.
+3. Build web pages: `bun run build`.
 
 ## 📜 Documentation
 
