@@ -10,5 +10,6 @@ pub fn make() -> Router<AppState> {
         .route("/", get(room::list))
         .route("/", post(room::create))
         .route("/{id}/join", post(room::join))
+        .route("/{room_code}/files", post(room::init_files))
         .route("/{room_code}", delete(room::delete_room))
 }
