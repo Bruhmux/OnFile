@@ -1,10 +1,10 @@
 use crate::{
-    db::tables::{Category, Clue},
+    db::tables::{Category, Clue, Discovery as DiscoveryRecord, DiscoveryCardType, Room},
     error::AppError,
     state::AppState,
     types::{
         discovery::{Discovery, File},
-        evidence::{Location, Suspect, Weapon},
+        evidence::{Evidence, Location, Suspect, Weapon},
     },
 };
 use axum::{
@@ -68,8 +68,20 @@ pub enum ClientRequest {
         location: Location,
     },
     DrawDiscovery,
+    // FIX: This is temporary, not to be had in final version
+    InitFiles {
+        amount: u8,
+    },
+    ChooseFile {
+        discovery_id: Uuid,
+        file_idx: u8,
+        category: Category,
+    },
     PlaceClue {
-        clue_id: Uuid,
+        x_category: Category,
+        x_idx: i32,
+        y_category: Category,
+        y_idx: i32,
         is_true: bool,
     },
 }
@@ -78,15 +90,47 @@ pub enum ClientRequest {
 #[serde(tag = "type", content = "payload")]
 pub enum ServerResponse {
     Error(String),
-    Chat { sender: String, message: String },
-    Joined { display_name: String },
-    Leave { display_name: String },
-    TurnStarted { display_name: String },
-    VerdictResult { correct: bool, message: String },
-    Removed { reason: String },
-    DrawDiscovery { files: u8 },
-    CluePlaced { display_name: String, clue: Clue },
-    PlayerStatus { display_name: String, active: bool },
+    Chat {
+        sender: String,
+        message: String,
+    },
+    Joined {
+        display_name: String,
+    },
+    Leave {
+        display_name: String,
+    },
+    TurnStarted {
+        display_name: String,
+    },
+    VerdictResult {
+        correct: bool,
+        message: String,
+    },
+    Removed {
+        reason: String,
+    },
+    DrawDiscovery {
+        discovery_id: Uuid,
+        card: Discovery,
+        files: u8,
+    },
+    CluePlaced {
+        display_name: String,
+        clue: Clue,
+    },
+    FileRevealed {
+        file_idx: u8,
+        evidence: Evidence,
+    },
+    // FIX: This is temporary, not to be had in final version
+    FilesInitiated {
+        files: Vec<File>,
+    },
+    PlayerStatus {
+        display_name: String,
+        active: bool,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -128,7 +172,7 @@ async fn handle_socket(
         display_name: display_name.clone(),
     })
     .unwrap();
-    let _ = tx.send(join_msg + " has joined the lobby.");
+    let _ = tx.send(join_msg);
 
     let (mut sink, mut stream) = socket.split();
     let mut send_task = tokio::spawn(async move {
@@ -254,20 +298,52 @@ async fn handle_socket(
                                     continue;
                                 }
 
+                                let discovery_id = Uuid::new_v4();
                                 let response;
                                 tokio::select! {
-                                    mut deck = state.decks.lock() => {
-                                        match deck.get_mut(&room_id).unwrap().draw() {
+                                    mut decks = state.decks.lock() => {
+                                        let deck = decks.entry(room_id.clone()).or_default();
+                                        let card = deck.draw();
+
+                                        let mut card_type = DiscoveryCardType::Wild;
+                                        let mut cat1: Option<Category> = None;
+                                        let mut cat2: Option<Category> = None;
+                                        let mut files = 1;
+
+                                        match &card {
                                             Discovery::Wild => {
-                                                response = ServerResponse::DrawDiscovery { files: 1 }
+                                                card_type = DiscoveryCardType::Wild;
+                                                files = 1;
                                             }
-                                            Discovery::Same(_) => {
-                                                response = ServerResponse::DrawDiscovery { files: 2 }
+                                            Discovery::Same(c) => {
+                                                card_type = DiscoveryCardType::Same;
+                                                cat1 = Some(*c);
+                                                files = 2;
                                             }
-                                            Discovery::Different(_, _) => {
-                                                response = ServerResponse::DrawDiscovery { files: 2 }
+                                            Discovery::Different(c1, c2) => {
+                                                card_type = DiscoveryCardType::Different;
+                                                cat1 = Some(*c1);
+                                                cat2 = Some(*c2);
+                                                files = 2;
                                             }
                                         }
+
+                                        let _ = sqlx::query!(
+                                            r#"
+                                            INSERT INTO discoveries (id, player_id, room_id, card_type, category_1, category_2)
+                                            VALUES ($1, $2, $3, $4, $5, $6)
+                                            "#,
+                                            discovery_id,
+                                            user_id,
+                                            room_id,
+                                            card_type as DiscoveryCardType,
+                                            cat1 as Option<Category>,
+                                            cat2 as Option<Category>,
+                                        )
+                                        .execute(&state.db)
+                                        .await;
+
+                                        response = ServerResponse::DrawDiscovery { discovery_id, card, files }
                                     }
                                     _ = sleep(Duration::from_secs(5)) => {
                                         response = ServerResponse::Error("Could not get lock on deck".to_string())
@@ -277,18 +353,115 @@ async fn handle_socket(
                                 let _ =
                                     tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
-                            ClientRequest::PlaceClue { clue_id, is_true } => {
+                            // FIX: This is temporary, not to be had in final version
+                            ClientRequest::InitFiles { amount } => {
+                                let files = crate::types::discovery::init_files(amount);
+                                let file_data = serde_json::to_value(&files).unwrap_or_default();
+
+                                let _ = sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
+                                    .bind(&file_data)
+                                    .bind(&room_id)
+                                    .execute(&state.db)
+                                    .await;
+
+                                let response = ServerResponse::FilesInitiated { files };
+                                let _ = tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
+                            }
+                            ClientRequest::ChooseFile {
+                                discovery_id,
+                                file_idx,
+                                category,
+                            } => {
+                                let discovery = match sqlx::query_as::<_, DiscoveryRecord>(
+                                    "SELECT * FROM discoveries WHERE id = $1",
+                                )
+                                .bind(discovery_id)
+                                .fetch_one(&state.db)
+                                .await
+                                {
+                                    Ok(d) => d,
+                                    Err(e) => {
+                                        let err = ServerResponse::Error(format!("Discovery not found: {}", e));
+                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        continue;
+                                    }
+                                };
+
+                                let room = match sqlx::query_as::<_, Room>(
+                                    "SELECT * FROM rooms WHERE id = $1",
+                                )
+                                .bind(&room_id)
+                                .fetch_one(&state.db)
+                                .await
+                                {
+                                    Ok(r) => r,
+                                    Err(e) => {
+                                        let err = ServerResponse::Error(format!("Room not found: {}", e));
+                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        continue;
+                                    }
+                                };
+
+                                let files: Vec<File> = match room.file_data {
+                                    Some(data) => match serde_json::from_value(data) {
+                                        Ok(f) => f,
+                                        Err(e) => {
+                                            let err = ServerResponse::Error(format!("Invalid file data: {}", e));
+                                            let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                            continue;
+                                        }
+                                    },
+                                    None => {
+                                        let err = ServerResponse::Error("Files not initialized".into());
+                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        continue;
+                                    }
+                                };
+
+                                let file = match files.get(file_idx as usize) {
+                                    Some(f) => f,
+                                    None => {
+                                        let err = ServerResponse::Error(format!("File index {} out of range", file_idx));
+                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        continue;
+                                    }
+                                };
+
+                                let evidence = match category {
+                                    Category::Suspect => Evidence::Suspect(file.suspect()),
+                                    Category::Weapon => Evidence::Weapon(file.weapon()),
+                                    Category::Location => Evidence::Location(file.location()),
+                                };
+
+                                let response = ServerResponse::FileRevealed { file_idx, evidence };
+                                let _ = tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
+                            }
+                            ClientRequest::PlaceClue {
+                                x_category,
+                                x_idx,
+                                y_category,
+                                y_idx,
+                                is_true,
+                            } => {
                                 if !session.active {
                                     let err = ServerResponse::Error("It is not your turn".into());
                                     let _ =
                                         tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
                                     continue;
                                 }
+                                let clue_id = Uuid::new_v4();
                                 let clue = query_as::<_, Clue>(r#"
                                     INSERT INTO clues (id, room_id, x_category, x_idx, y_category, y_idx, is_true)
                                     VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                    RETURNING *
                                     "#)
                                     .bind(clue_id)
+                                    .bind(&room_id)
+                                    .bind(x_category)
+                                    .bind(x_idx)
+                                    .bind(y_category)
+                                    .bind(y_idx)
+                                    .bind(is_true)
                                     .fetch_one(&state.db)
                                     .await
                                     .unwrap();
