@@ -148,6 +148,7 @@ export interface DrawDiscoveryPayload {
   discovery_id: string;
   card: DiscoveryCard;
   files: number;
+  total_files: number;
 }
 
 export interface InitFilesMessage {

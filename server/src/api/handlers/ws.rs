@@ -114,6 +114,7 @@ pub enum ServerResponse {
         discovery_id: Uuid,
         card: Discovery,
         files: u8,
+        total_files: u8,
     },
     CluePlaced {
         display_name: String,
@@ -314,6 +315,20 @@ async fn handle_socket(
                                 }
 
                                 let discovery_id = Uuid::new_v4();
+
+                                let total_files: u8 = match sqlx::query_as::<_, Room>(
+                                    "SELECT * FROM rooms WHERE id = $1",
+                                )
+                                .bind(&room_id)
+                                .fetch_one(&state.db)
+                                .await
+                                {
+                                    Ok(room) => room.file_data
+                                        .and_then(|d| d.as_array().map(|a| a.len() as u8))
+                                        .unwrap_or(0),
+                                    Err(_) => 0,
+                                };
+
                                 let response;
                                 tokio::select! {
                                     mut decks = state.decks.lock() => {
@@ -358,7 +373,7 @@ async fn handle_socket(
                                         .execute(&state.db)
                                         .await;
 
-                                        response = ServerResponse::DrawDiscovery { discovery_id, card, files }
+                                        response = ServerResponse::DrawDiscovery { discovery_id, card, files, total_files }
                                     }
                                     _ = sleep(Duration::from_secs(3)) => {
                                         response = ServerResponse::Error("Could not get lock on deck".to_string())

@@ -189,7 +189,7 @@ function getIndexLabel(category: Category, idx: number): string {
 
           <label class="block text-xs font-medium text-gray-600 mb-1">File Index</label>
           <select v-model.number="chosenFileIdx" class="w-full mb-4 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
-            <option v-for="i in pendingDiscovery.files" :key="i - 1" :value="i - 1" :disabled="disabledFiles.includes(i - 1)">
+            <option v-for="i in pendingDiscovery.total_files" :key="i - 1" :value="i - 1" :disabled="disabledFiles.includes(i - 1)">
               File {{ i }}{{ disabledFiles.includes(i - 1) ? ' (used)' : '' }}
             </option>
           </select>
