@@ -2,6 +2,31 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, types::Uuid};
 
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
+#[sqlx(type_name = "discovery_card_type", rename_all = "lowercase")]
+pub enum DiscoveryCardType {
+    Wild,
+    Same,
+    Different,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
+#[sqlx(type_name = "game_status", rename_all = "snake_case")]
+pub enum GameStatus {
+    Open,
+    InProgress,
+    Finished,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "category", rename_all = "lowercase")]
+pub enum Category {
+    Suspect,
+    Weapon,
+    Location,
+}
+
 #[derive(FromRow, Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
@@ -40,31 +65,6 @@ pub struct GameState {
     pub files_data: Option<serde_json::Value>,
 }
 
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
-#[sqlx(type_name = "discovery_card_type", rename_all = "lowercase")]
-pub enum DiscoveryCardType {
-    Wild,
-    Same,
-    Different,
-}
-
-#[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq)]
-#[sqlx(type_name = "game_status", rename_all = "snake_case")]
-pub enum GameStatus {
-    Open,
-    InProgress,
-    Finished,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
-#[serde(rename_all = "lowercase")]
-#[sqlx(type_name = "category", rename_all = "lowercase")]
-pub enum Category {
-    Suspect,
-    Weapon,
-    Location,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Clue {
     pub id: Uuid,
@@ -81,5 +81,7 @@ pub struct Discovery {
     pub id: Uuid,
     pub player_id: Uuid,
     pub room_id: String,
-    pub clue_id: Uuid,
+    pub card_type: DiscoveryCardType,
+    pub category_1: Category,
+    pub category_2: Category,
 }
