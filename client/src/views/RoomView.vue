@@ -22,15 +22,20 @@ const {
   wsConnected,
   messages,
   pendingDiscovery,
+  discoveryStep,
+  activeCategory,
+  disabledFiles,
+  cardCategories,
   connectWebSocket,
   disconnectWebSocket,
   sendChat,
   sendDrawDiscovery,
   sendGuess,
   sendPlaceClue,
-  sendChooseFile,
   sendInitFiles,
-  clearPendingDiscovery,
+  discoveryPickCategory,
+  discoveryPickFile,
+  cancelDiscovery,
   clearMessages,
   leaveRoom,
 } = useGame();
@@ -48,7 +53,6 @@ const clueIsTrue = ref(true);
 const fileAmount = ref(4);
 
 const chosenFileIdx = ref(0);
-const chosenCategory = ref<Category>('suspect');
 
 function handleConnect(): void {
   connectWebSocket();
@@ -84,16 +88,6 @@ function handlePlaceClue(): void {
 
 function handleInitFiles(): void {
   sendInitFiles(fileAmount.value);
-}
-
-function handleChooseFile(): void {
-  if (!pendingDiscovery.value) return;
-  sendChooseFile(pendingDiscovery.value.discovery_id, chosenFileIdx.value, chosenCategory.value);
-  clearPendingDiscovery();
-}
-
-function handleCancelPick(): void {
-  clearPendingDiscovery();
 }
 
 function handleLeaveRoom(): void {
@@ -153,31 +147,51 @@ function getIndexLabel(category: Category, idx: number): string {
       </div>
     </header>
 
-    <div v-if="pendingDiscovery" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div v-if="pendingDiscovery && discoveryStep" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div class="bg-white rounded-xl shadow-xl p-6 w-80 max-w-full">
-        <h3 class="text-lg font-semibold text-gray-900 mb-1">Pick a File</h3>
-        <p class="text-sm text-gray-500 mb-4">Choose a file to examine (0–{{ pendingDiscovery.files - 1 }})</p>
-
-        <label class="block text-xs font-medium text-gray-600 mb-1">File Index</label>
-        <select v-model.number="chosenFileIdx" class="w-full mb-3 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
-          <option v-for="i in pendingDiscovery.files" :key="i - 1" :value="i - 1">
-            File {{ i }}
-          </option>
-        </select>
-
-        <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
-        <select v-model="chosenCategory" class="w-full mb-4 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
-          <option v-for="c in CATEGORIES" :key="c.value" :value="c.value">{{ c.label }}</option>
-        </select>
-
-        <div class="flex gap-2">
-          <button @click="handleChooseFile" class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded hover:bg-indigo-700 transition-colors">
-            Examine File
-          </button>
-          <button @click="handleCancelPick" class="px-3 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded hover:bg-gray-300 transition-colors">
+        <template v-if="discoveryStep === 'choose-category'">
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Choose a Category</h3>
+          <p class="text-sm text-gray-500 mb-4">Which category do you want to investigate first?</p>
+          <div class="flex gap-3">
+            <button
+              v-for="cat in cardCategories" :key="cat"
+              @click="discoveryPickCategory(cat)"
+              class="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              {{ CATEGORIES.find(c => c.value === cat)?.label }}
+            </button>
+          </div>
+          <button @click="cancelDiscovery" class="mt-3 w-full px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
             Cancel
           </button>
-        </div>
+        </template>
+
+        <template v-else>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ disabledFiles.length === 0 ? 'Pick a File' : 'Pick Another File' }}</h3>
+          <p class="text-sm text-gray-500 mb-4">
+            Category: <strong>{{ CATEGORIES.find(c => c.value === activeCategory)?.label }}</strong>
+          </p>
+
+          <label class="block text-xs font-medium text-gray-600 mb-1">File Index</label>
+          <select v-model.number="chosenFileIdx" class="w-full mb-4 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <option v-for="i in pendingDiscovery.files" :key="i - 1" :value="i - 1" :disabled="disabledFiles.includes(i - 1)">
+              File {{ i }}{{ disabledFiles.includes(i - 1) ? ' (used)' : '' }}
+            </option>
+          </select>
+
+          <div class="flex gap-2">
+            <button
+              @click="discoveryPickFile(chosenFileIdx)"
+              :disabled="disabledFiles.includes(chosenFileIdx)"
+              class="flex-1 px-3 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Examine File
+            </button>
+            <button @click="cancelDiscovery" class="px-3 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </template>
       </div>
     </div>
 

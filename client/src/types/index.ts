@@ -141,9 +141,11 @@ export interface ChooseFileMessage {
   };
 }
 
+export type DiscoveryCard = 'Wild' | { Same: Category } | { Different: [Category, Category] };
+
 export interface DrawDiscoveryPayload {
   discovery_id: string;
-  card: unknown;
+  card: DiscoveryCard;
   files: number;
 }
 

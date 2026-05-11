@@ -40,27 +40,6 @@ pub struct GameState {
     pub files_data: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Clue {
-    pub id: Uuid,
-    pub room_id: String,
-    pub x_category: Category,
-    pub x_idx: i32,
-    pub y_category: Category,
-    pub y_idx: i32,
-    pub is_true: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Discovery {
-    pub id: Uuid,
-    pub player_id: Uuid,
-    pub room_id: String,
-    pub card_type: DiscoveryCardType,
-    pub category_1: Option<Category>,
-    pub category_2: Option<Category>,
-}
-
 #[derive(sqlx::Type, Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 #[sqlx(type_name = "discovery_card_type", rename_all = "lowercase")]
 pub enum DiscoveryCardType {
@@ -79,14 +58,6 @@ pub enum GameStatus {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
-#[sqlx(type_name = "category", rename_all = "lowercase")]
-pub enum Category {
-    Suspect,
-    Weapon,
-    Location,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "category", rename_all = "lowercase")]
 pub enum Category {
     Suspect,

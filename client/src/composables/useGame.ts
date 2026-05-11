@@ -18,6 +18,10 @@ const credentials = ref<GameCredentials | null>(null);
 const wsConnected = ref(false);
 const messages = reactive<WsMessage[]>([]);
 const pendingDiscovery = ref<DrawDiscoveryPayload | null>(null);
+const discoveryStep = ref<'choose-category' | 'pick-file' | 'pick-file-again' | null>(null);
+const activeCategory = ref<Category | null>(null);
+const disabledFiles = ref<number[]>([]);
+const cardCategories = ref<Category[]>([]);
 let ws: WebSocket | null = null;
 
 export function useGame() {
@@ -99,7 +103,7 @@ export function useGame() {
     disconnectWebSocket();
     credentials.value = null;
     messages.length = 0;
-    pendingDiscovery.value = null;
+    clearPendingDiscovery();
   }
 
   function connectWebSocket(): void {
@@ -122,7 +126,23 @@ export function useGame() {
         const data = JSON.parse(event.data);
         addMessage('received', data);
         if (data.type === 'DrawDiscovery') {
-          pendingDiscovery.value = data.payload as DrawDiscoveryPayload;
+          const payload = data.payload as DrawDiscoveryPayload;
+          pendingDiscovery.value = payload;
+
+          if (payload.card === 'Wild') {
+            discoveryStep.value = 'pick-file';
+            activeCategory.value = null;
+            cardCategories.value = [];
+          } else if ('Same' in payload.card) {
+            discoveryStep.value = 'pick-file';
+            activeCategory.value = payload.card.Same;
+            cardCategories.value = [payload.card.Same];
+          } else if ('Different' in payload.card) {
+            discoveryStep.value = 'choose-category';
+            activeCategory.value = null;
+            cardCategories.value = payload.card.Different;
+          }
+          disabledFiles.value = [];
         }
       } catch {
         addMessage('received', { raw: event.data });
@@ -183,6 +203,35 @@ export function useGame() {
 
   function clearPendingDiscovery(): void {
     pendingDiscovery.value = null;
+    discoveryStep.value = null;
+    activeCategory.value = null;
+    disabledFiles.value = [];
+    cardCategories.value = [];
+  }
+
+  function discoveryPickCategory(cat: Category): void {
+    activeCategory.value = cat;
+    discoveryStep.value = 'pick-file';
+  }
+
+  function discoveryPickFile(fileIdx: number): void {
+    if (!pendingDiscovery.value || !activeCategory.value) return;
+    sendChooseFile(pendingDiscovery.value.discovery_id, fileIdx, activeCategory.value);
+    disabledFiles.value.push(fileIdx);
+
+    if (discoveryStep.value === 'pick-file-again') {
+      clearPendingDiscovery();
+    } else {
+      if (cardCategories.value.length === 2) {
+        const other = cardCategories.value.find(c => c !== activeCategory.value) ?? null;
+        activeCategory.value = other;
+      }
+      discoveryStep.value = 'pick-file-again';
+    }
+  }
+
+  function cancelDiscovery(): void {
+    clearPendingDiscovery();
   }
 
   function sendPlaceClue(
@@ -216,6 +265,10 @@ export function useGame() {
     wsConnected,
     messages,
     pendingDiscovery,
+    discoveryStep,
+    activeCategory,
+    disabledFiles,
+    cardCategories,
     fetchRooms,
     createRoom,
     joinRoom,
@@ -228,6 +281,9 @@ export function useGame() {
     sendChooseFile,
     sendInitFiles,
     clearPendingDiscovery,
+    discoveryPickCategory,
+    discoveryPickFile,
+    cancelDiscovery,
     sendGuess,
     sendPlaceClue,
     clearMessages,

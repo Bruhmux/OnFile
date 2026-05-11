@@ -328,7 +328,7 @@ async fn handle_socket(
                                             }
                                         }
 
-                                        let _ = sqlx::query!(
+                                        let result = sqlx::query!(
                                             r#"
                                             INSERT INTO discoveries (id, player_id, room_id, card_type, category_1, category_2)
                                             VALUES ($1, $2, $3, $4, $5, $6)
@@ -353,19 +353,21 @@ async fn handle_socket(
                                 let _ =
                                     tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
-                            // FIX: This is temporary, not to be had in final version
+                            // FIX: This is temporary, not to be in final version
                             ClientRequest::InitFiles { amount } => {
                                 let files = crate::types::discovery::init_files(amount);
                                 let file_data = serde_json::to_value(&files).unwrap_or_default();
 
-                                let _ = sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
-                                    .bind(&file_data)
-                                    .bind(&room_id)
-                                    .execute(&state.db)
-                                    .await;
+                                let _ =
+                                    sqlx::query("UPDATE rooms SET file_data = $1 WHERE id = $2")
+                                        .bind(&file_data)
+                                        .bind(&room_id)
+                                        .execute(&state.db)
+                                        .await;
 
                                 let response = ServerResponse::FilesInitiated { files };
-                                let _ = tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
+                                let _ =
+                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
                             ClientRequest::ChooseFile {
                                 discovery_id,
@@ -381,8 +383,12 @@ async fn handle_socket(
                                 {
                                     Ok(d) => d,
                                     Err(e) => {
-                                        let err = ServerResponse::Error(format!("Discovery not found: {}", e));
-                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        let err = ServerResponse::Error(format!(
+                                            "Discovery not found: {}",
+                                            e
+                                        ));
+                                        let _ = tx_clone
+                                            .send(serde_json::to_string_pretty(&err).unwrap());
                                         continue;
                                     }
                                 };
@@ -396,8 +402,10 @@ async fn handle_socket(
                                 {
                                     Ok(r) => r,
                                     Err(e) => {
-                                        let err = ServerResponse::Error(format!("Room not found: {}", e));
-                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        let err =
+                                            ServerResponse::Error(format!("Room not found: {}", e));
+                                        let _ = tx_clone
+                                            .send(serde_json::to_string_pretty(&err).unwrap());
                                         continue;
                                     }
                                 };
@@ -406,14 +414,20 @@ async fn handle_socket(
                                     Some(data) => match serde_json::from_value(data) {
                                         Ok(f) => f,
                                         Err(e) => {
-                                            let err = ServerResponse::Error(format!("Invalid file data: {}", e));
-                                            let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                            let err = ServerResponse::Error(format!(
+                                                "Invalid file data: {}",
+                                                e
+                                            ));
+                                            let _ = tx_clone
+                                                .send(serde_json::to_string_pretty(&err).unwrap());
                                             continue;
                                         }
                                     },
                                     None => {
-                                        let err = ServerResponse::Error("Files not initialized".into());
-                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        let err =
+                                            ServerResponse::Error("Files not initialized".into());
+                                        let _ = tx_clone
+                                            .send(serde_json::to_string_pretty(&err).unwrap());
                                         continue;
                                     }
                                 };
@@ -421,8 +435,12 @@ async fn handle_socket(
                                 let file = match files.get(file_idx as usize) {
                                     Some(f) => f,
                                     None => {
-                                        let err = ServerResponse::Error(format!("File index {} out of range", file_idx));
-                                        let _ = tx_clone.send(serde_json::to_string_pretty(&err).unwrap());
+                                        let err = ServerResponse::Error(format!(
+                                            "File index {} out of range",
+                                            file_idx
+                                        ));
+                                        let _ = tx_clone
+                                            .send(serde_json::to_string_pretty(&err).unwrap());
                                         continue;
                                     }
                                 };
@@ -434,7 +452,8 @@ async fn handle_socket(
                                 };
 
                                 let response = ServerResponse::FileRevealed { file_idx, evidence };
-                                let _ = tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
+                                let _ =
+                                    tx_clone.send(serde_json::to_string_pretty(&response).unwrap());
                             }
                             ClientRequest::PlaceClue {
                                 x_category,
