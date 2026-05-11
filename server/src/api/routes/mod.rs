@@ -5,11 +5,13 @@ pub mod clue;
 pub mod discovery;
 pub mod room;
 pub mod verdict;
+pub mod ws;
 
-pub fn make() -> Router<AppState> {
+pub fn route() -> Router<AppState> {
     Router::new()
-        .nest("/rooms", room::router())
+        .nest("/rooms", room::make())
         .nest("/clues", clue::router())
         .nest("/discoveries", discovery::router())
         .nest("/verdicts", verdict::router())
+        .nest("/ws", ws::router())
 }

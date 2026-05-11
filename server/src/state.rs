@@ -1,11 +1,14 @@
-use crate::config::Config;
+use crate::{config::Config, types::grid::Deck};
 use sqlx::PgPool;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::{Mutex, broadcast};
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
     pub config: Arc<Config>,
+    pub channels: Arc<Mutex<HashMap<String, broadcast::Sender<String>>>>,
+    pub decks: Arc<Mutex<HashMap<String, Deck>>>,
 }
 
 // Example state

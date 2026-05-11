@@ -21,8 +21,8 @@ CREATE TABLE clues (
 
 CREATE TABLE discoveries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    player_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    room_id VARCHAR(5) REFERENCES rooms(id) ON DELETE CASCADE,
-    clue_id UUID REFERENCES clues(id) ON DELETE CASCADE,
+    player_id UUID REFERENCES users(id),
+    room_id VARCHAR(5) REFERENCES rooms(id),
+    clue_id UUID REFERENCES clues(id),
     UNIQUE(player_id, clue_id)
 );

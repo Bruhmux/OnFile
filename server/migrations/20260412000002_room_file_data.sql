@@ -1,0 +1,1 @@
+ALTER TABLE rooms ADD COLUMN file_data JSONB;

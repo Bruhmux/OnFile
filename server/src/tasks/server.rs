@@ -24,7 +24,7 @@ pub async fn create_app(state: AppState, mut shutdown_rx: watch::Receiver<bool>)
         let app: Router = Router::new()
             .fallback_service(ServeDir::new("client/dist"))
             .layer(cors)
-            .nest("/api", api::routes::make())
+            .nest("/api", api::routes::route())
             .with_state(state);
 
         println!("Listening on {addr}");

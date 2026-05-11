@@ -1,4 +1,4 @@
-use crate::{state::AppState, types::AppError};
+use crate::{error::AppError, state::AppState};
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

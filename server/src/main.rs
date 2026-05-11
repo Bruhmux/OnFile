@@ -1,10 +1,9 @@
-#![allow(dead_code, unused_variables)]
-use axum::extract::State;
 use crypts_and_clues::{
     cli::repl::init_repl, config::init_config, db::init_connection, state::AppState,
     tasks::server::assemble_app,
 };
-use tokio::{join, sync::watch};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::{Mutex, watch};
 use tracing::info;
 
 #[tokio::main]
@@ -19,23 +18,20 @@ async fn main() {
             .expect("Error initializing database connection"),
 
         config: app_config,
+        channels: Arc::new(Mutex::new(HashMap::new())),
+        decks: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     info!("Starting tasks...");
     let app_server = assemble_app(app_state.clone(), shutdown_rx);
     info!(" >Server running...");
-    let repl_loop = init_repl(State(app_state.clone()), shutdown_tx);
+    let repl_loop = init_repl(app_state.clone(), shutdown_tx);
     info!(" >REPL running...");
 
     info!("Joining tasks...");
 
-    join!(app_server, repl_loop);
-
-    // tokio::select! {
-    //     res = app_server => info!("App server task finished: {:?}", res),
-    //     res = repl_loop => info!("CLI loop task finished: {:?}", res),
-    // };
+    let _ = tokio::join!(biased; app_server, repl_loop);
 
     info!("Main exiting...");
 }

@@ -70,7 +70,7 @@ CREATE TABLE logic_grids (
 
 
 CREATE TABLE grid_cells (
-    grid_id UUID NOT NULL REFERENCES logic_grids(id) ON DELETE CASCADE,
+    grid_id UUID NOT NULL REFERENCES logic_grids(id),
     row_index INT NOT NULL CHECK (row_index >= 0 AND row_index < 8),
     col_index INT NOT NULL CHECK (col_index >= 0 AND col_index < 8),
     value BOOLEAN,

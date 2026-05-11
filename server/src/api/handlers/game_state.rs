@@ -1,8 +1,4 @@
-use crate::{
-    db::tables::Clue,
-    state::AppState,
-    types::{AppError, LogicGrid},
-};
+use crate::{db::tables::Clue, error::AppError, state::AppState, types::grid::LogicGrid};
 use axum::{
     Json,
     extract::{Path, State},
@@ -26,6 +22,12 @@ pub async fn get_grid(
     // For now, assume a dummy player_id for testing
     let dummy_player_id = Uuid::nil();
 
+    let player_count: i32 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM room_participants WHERE room_id = $1;")
+            .bind(&room_id)
+            .fetch_one(&state.db)
+            .await?;
+
     let clues = sqlx::query_as::<_, Clue>(
         r#"
         SELECT c.* 
@@ -34,12 +36,12 @@ pub async fn get_grid(
         WHERE c.room_id = $1 AND d.player_id = $2
         "#,
     )
-    .bind(&room_id)
+    .bind(room_id)
     .bind(dummy_player_id)
     .fetch_all(&state.db)
     .await?;
 
-    Ok(Json(LogicGrid::from_clues(clues)))
+    Ok(Json(LogicGrid::from_clues(player_count as usize, clues)))
 }
 
 pub async fn add_mark(
@@ -61,7 +63,7 @@ pub async fn add_mark(
 
 pub async fn remove_mark(
     State(state): State<AppState>,
-    Path(room_id): Path<String>,
+    Path(_room_id): Path<String>,
     Json(payload): Json<AddMarkRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     sqlx::query("DELETE FROM discoveries WHERE player_id = $1 AND clue_id = $2")
